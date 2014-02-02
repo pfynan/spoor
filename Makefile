@@ -57,7 +57,7 @@
 ##==========================================================================
 
 # The pre-processor and compiler options.
-MY_CFLAGS = $(shell pkg-config --cflags opencv)
+MY_CFLAGS = --std=c++11 $(shell pkg-config --cflags opencv)
 
 # The linker options.
 MY_LIBS   = $(shell pkg-config --libs opencv)
@@ -88,16 +88,16 @@ HDREXTS = .h .H .hh .hpp .HPP .h++ .hxx .hp
 
 # The pre-processor and compiler options.
 # Users can override those variables from the command line.
-CFLAGS  = -g
-CXXFLAGS= -g --std=c++11
+CFLAGS  ?= -g
+CXXFLAGS?= -g
 
 
 
 # The C program compiler.
-CC     = clang
+CC     = gcc
 
 # The C++ program compiler.
-CXX    = clang++
+CXX    = g++
 
 # Un-comment the following line to compile C programs as C++ ones.
 #CC     = $(CXX)

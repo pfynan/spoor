@@ -1,62 +1,62 @@
+#include "utility.h"
 #include "feature.h"
 
 #include <vector>
 #include <algorithm>
+#include <numeric>
+#include <cmath>
+
+#include <highgui.h>
 
 using namespace std;
 using namespace boost;
 using namespace cv;
 
-FeatureExtract::FeatureExtract() : bsub(500,5,0.6)
+FeatureExtract::FeatureExtract(Size size) : bsub(500,5,0.6), buffer(2),
+    frame_size(size)
 {
 
+    r = 1;
+    fs = 25;
+    w = 1.0/fs * 2.0 * M_PI;
+
+
+    filter_a = {2.0*r*cos(w),-r*r};
 }
 
 
 boost::optional<Point2f> FeatureExtract::operator()(Mat& image)
 {
-        cvtColor(image,image,CV_BGR2GRAY);
-        normalize(image,image, 0, 255, NORM_MINMAX, CV_8UC1);
+    cvtColor(image,image,CV_BGR2GRAY);
+    image.convertTo(image,CV_64FC1);
+    //normalize(image,image, 0, 1, NORM_MINMAX, CV_32FC1);
 
 
-        //adaptiveThreshold(image,image,255,ADAPTIVE_THRESH_MEAN_C,THRESH_BINARY,63,-150);
-        
-        bsub(image,image,0.002);
+    //adaptiveThreshold(image,image,255,ADAPTIVE_THRESH_MEAN_C,THRESH_BINARY,63,-150);
 
-        vector<vector<Point>> contours;
-        vector<Vec4i> hierarchy;
-        findContours(image, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+    //bsub(image,image,0.002);
 
-        vector<Moments> mu(contours.size() );
-        for( size_t i = 0; i < contours.size(); i++ ) { 
-            mu[i] = moments( contours[i], false );
-        }
 
-        ///  Get the mass centers:
-        vector<Point2f> mc( contours.size() );
-        for( size_t i = 0; i < contours.size(); i++ ) { 
-            mc[i] = Point2f( mu[i].m10/mu[i].m00 , mu[i].m01/mu[i].m00 );
-        }
+    image /= 255.0;
+    //image -= 0.5;
 
-        /*for( size_t  i = 0; i< contours.size(); i++ )
-        {
-            Scalar color = Scalar(0,255,0);
-            drawContours( disp, contours, i, color, 2, 8, hierarchy, 0, Point() );
+    image /= 50.0;
 
-        }*/
+    if(!buffer.empty())
+        image = inner_product(begin(buffer),end(buffer),begin(filter_a), image);
 
-        auto blob = max_element(begin(mu),end(mu),[](Moments a, Moments b){ return a.m00 < b.m00; });
+    
+    imshow("Hi",image);
+    waitKey(0);
 
-        Point2f measurement;
+    buffer.push_front(image.clone()); // Oh honey. This is going to churn the heap.
 
-        if(blob != end(mu) && blob->m00 > 40) {
-            measurement.x = blob->m10/blob->m00;
-            measurement.y = blob->m01/blob->m00;
-            return optional<Point2f>(measurement);
 
-        } else {
-            return optional<Point2f>();
-        }
+    
+
+
+    image.convertTo(image,CV_8UC1);
+    return getBiggestBlob(image);
 
 }
 

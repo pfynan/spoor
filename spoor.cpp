@@ -42,7 +42,8 @@ int main(int argc,char *argv[]) {
     }
 
 
-    
+    Size frame_size = Size( capture.get(CV_CAP_PROP_FRAME_WIDTH)
+                          , capture.get(CV_CAP_PROP_FRAME_HEIGHT));
     
 
     VideoWriter writer;
@@ -52,16 +53,14 @@ int main(int argc,char *argv[]) {
             ( "out.avi"
             , CV_FOURCC('F','M','P','4')
             , capture.get(CV_CAP_PROP_FPS)
-            , Size
-                ( capture.get(CV_CAP_PROP_FRAME_WIDTH)
-                , capture.get(CV_CAP_PROP_FRAME_HEIGHT)));
+            , frame_size);
     }
 
     Mat image;
     namedWindow("Out",1);
 
 
-    FeatureExtract fe;
+    FeatureExtract fe(frame_size);
     Tracking tr;
 
     while(capture >> image, !image.empty()) {

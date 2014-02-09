@@ -4,6 +4,8 @@
 #include <cv.h>
 #include <boost/optional.hpp>
 
+#include <cmath>
+
 inline void cross(cv::Mat& img,cv::Point pt,int size=10) {
     using namespace cv;
 
@@ -52,5 +54,10 @@ inline boost::optional<cv::Point2f> getBiggestBlob(const cv::Mat &image) {
         return optional<Point2f>();
     }
 
+}
+
+// Mean of 0; ||square_wave|| = sqrt(N)
+inline float square_wave(int t) {
+    return 4.0*std::floor(t/(2*M_PI)) - 2.0*std::floor(2.0*t/(2*M_PI)) + 1.0;
 }
 

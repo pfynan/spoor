@@ -78,8 +78,6 @@ int main(int argc,char *argv[]) {
 
             //imshow("Out",disp);
             //if(waitKey(1) == 27) break;
-    imshow("x",image);
-    waitKey(0);
 
         cvtColor(image,image,CV_GRAY2BGR);
         

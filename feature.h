@@ -10,7 +10,6 @@ class FeatureExtract {
         FeatureExtract(cv::Size size);
         boost::optional<cv::Point2f> operator() (cv::Mat& image);
     private:
-        cv::BackgroundSubtractorMOG bsub;
         boost::circular_buffer<cv::Mat> buffer;
         cv::Size frame_size;
 
@@ -19,7 +18,7 @@ class FeatureExtract {
         double fn;
         double w;
 
+        static constexpr size_t length = 25;
 
-        std::array<double,2> filter_a;
 };
 

@@ -47,6 +47,9 @@ flags = [
 # include third party libraries
 #'-isystem',
 #'/usr/include/python2.7',
+
+'-isystem',
+'/usr/include',
 ]
 
 # youcompleteme is calling this function to get flags

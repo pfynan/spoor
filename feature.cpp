@@ -37,7 +37,7 @@ boost::optional<Point2f> FeatureExtract::operator()(Mat& image)
     //bsub(image,image,0.002);
 
 
-    image /= 255.0;
+    //image /= 255.0;
     //image -= 0.5;
 
     image /= 50.0;
@@ -46,16 +46,16 @@ boost::optional<Point2f> FeatureExtract::operator()(Mat& image)
         image = inner_product(begin(buffer),end(buffer),begin(filter_a), image);
 
     
-    imshow("Hi",image);
-    waitKey(0);
-
     buffer.push_front(image.clone()); // Oh honey. This is going to churn the heap.
 
 
+    //image *= 255.0;
     
 
 
     image.convertTo(image,CV_8UC1);
+
+
     return getBiggestBlob(image);
 
 }

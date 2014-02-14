@@ -20,7 +20,7 @@ FeatureExtract::FeatureExtract(Size size) : buffer(length),
 
     r = 1;
     fs = 25;
-    w = 1.0/fs * 2.0 * M_PI;
+    w = 4.0/fs * 2.0 * M_PI;
 
 }
 
@@ -46,8 +46,10 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
         buf_norm += x.mul(x);
     }
 
-    buf_mean /= buffer.size();
+    buf_norm = buf_norm - buf_mean.mul(buf_mean) / buffer.size();
     sqrt(buf_norm,buf_norm);
+
+    buf_mean /= buffer.size();
 
     vector<Mat> corrs;
 
@@ -64,23 +66,25 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
 
     }
 
-    auto big_corr = max_element(begin(buffer),end(buffer),[](const Mat &x,const Mat &y) {return sum(x)[0] < sum(y)[0];});
+    auto big_corr = max_element(begin(corrs),end(corrs),[](const Mat &x,const Mat &y) {return sum(x)[0] < sum(y)[0];});
 
-    cout << "Frame" << endl;
+    //cout << "Frame" << endl;
 
-    if(big_corr != end(buffer)) {
-        imshow("Out",*big_corr * 0.5 + 0.5);
-        waitKey(1);
-    }
-
-
+    //if(big_corr != end(corrs)) {
+        //imshow("Out",*big_corr * 0.5 + 0.5);
+        //waitKey(1);
+    //}
 
 
 
-    image.convertTo(image,CV_8UC1);
+
+    *big_corr *= 128;
+    *big_corr += 128;
+    big_corr->convertTo(image,CV_8UC1);
 
 
-    return getBiggestBlob(image);
+    return optional<Point2f>(); 
+        //getBiggestBlob(image);
 
 }
 

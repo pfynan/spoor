@@ -7,6 +7,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS 1 )
 
 add_definitions( -std=c++0x )
 
+find_package( Threads )
 find_package( Boost 1.55 COMPONENTS system REQUIRED )
 find_package( OpenCV 1.4.8 REQUIRED )
 
@@ -27,5 +28,6 @@ add_executable( spoor
 target_link_libraries( spoor
     ${Boost_LIBRARIES}
     ${OpenCV_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
     )
 

@@ -10,6 +10,8 @@
 
 #include "cvplot.hpp"
 
+#include <boost/asio.hpp>
+
 using namespace std;
 using namespace cv;
 using namespace boost;
@@ -61,13 +63,19 @@ int main(int argc,char *argv[]) {
     Mat image;
     namedWindow("Out",1);
 
-    vector<float> intens;
-
     FeatureExtract fe(frame_size);
     Tracking tr;
 
+    using boost::asio::ip::tcp;
+    boost::asio::io_service io_service;
+
+    tcp::socket s(io_service);
+    tcp::resolver resolver(io_service);
+    boost::asio::connect(s, resolver.resolve({"127.0.0.1", "9090"}));
+
+
     while(capture >> image, !image.empty()) {
-    
+        
 
         Mat disp;
         image.copyTo(disp);
@@ -80,9 +88,20 @@ int main(int argc,char *argv[]) {
 
             //imshow("Out",disp);
             //if(waitKey(1) == 27) break;
+        
 
+
+        char net_buffer[6];
+
+        net_buffer[0] = 5;
+        net_buffer[1] = 1;
+        *((short*)(net_buffer + 2)) = htons((int)pp.x);
+        *((short*)(net_buffer + 4)) = htons((int)pp.y);
 
         
+
+        boost::asio::write(s,boost::asio::buffer(net_buffer,6));
+
         writer << disp;
 
         if(interactive) {

@@ -67,33 +67,29 @@ int main(int argc,char *argv[]) {
     Tracking tr;
 
     while(capture >> image, !image.empty()) {
+    
 
         Mat disp;
         image.copyTo(disp);
        
         optional<Point2f> fp = fe(image);
-        //Point2f pp = tr(fp);
+        Point2f pp = tr(fp);
 
-        //cross( disp , pp );
+        cross( disp , pp );
         
 
             //imshow("Out",disp);
             //if(waitKey(1) == 27) break;
 
-        intens.push_back(sum(image)[0]);
-        cvtColor(image,image,CV_GRAY2BGR);
 
         
-        writer << image;
+        writer << disp;
 
         if(interactive) {
-            imshow("Out",image);
+            imshow("Out",disp);
             if(waitKey(1) == 27) break;
         }
     }
-
-    CvPlot::plot("Out",&intens[0],intens.size(),1,0,0,255);
-    waitKey(0);
 
 
     return 0;

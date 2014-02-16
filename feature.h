@@ -10,10 +10,9 @@ class FeatureExtract {
         FeatureExtract(cv::Size size);
         boost::optional<cv::Point2f> operator() (cv::Mat& image);
     private:
-        boost::circular_buffer<cv::Mat> buffer;
+        boost::circular_buffer<cv::Mat> corr_buffer,filt_buffer;
         cv::Size frame_size;
 
-        double r;
         double fs;
         double fn;
         double w;

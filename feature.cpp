@@ -14,11 +14,11 @@ using namespace std;
 using namespace boost;
 using namespace cv;
 
-FeatureExtract::FeatureExtract(Size size) : buffer(length),
+FeatureExtract::FeatureExtract(Size size) : corr_buffer(length),
+    filt_buffer((length+1)/2),
     frame_size(size)
 {
 
-    r = 1;
     fs = 25;
     w = 4.0/fs * 2.0 * M_PI;
 
@@ -31,42 +31,58 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
     image.convertTo(image,CV_32FC1);
     //normalize(image,image, 0, 1, NORM_MINMAX, CV_32FC1);
 
+    image /= 255;
 
-    //adaptiveThreshold(image,image,255,ADAPTIVE_THRESH_MEAN_C,THRESH_BINARY,63,-150);
 
-    buffer.push_back(image.clone()); // Oh honey. This is going to churn the heap.
+    corr_buffer.push_back(image.clone()); // Oh honey. This is going to churn the heap.
 
     Mat buf_mean,buf_norm;
 
     buf_mean = Mat::zeros(frame_size,CV_32FC1);
     buf_norm = Mat::zeros(frame_size,CV_32FC1);
 
-    for(Mat& x : buffer) {
+    for(Mat& x : corr_buffer) {
         buf_mean += x;
         buf_norm += x.mul(x);
     }
 
-    buf_norm = buf_norm - buf_mean.mul(buf_mean) / buffer.size();
+    buf_norm = buf_norm - buf_mean.mul(buf_mean) / corr_buffer.size();
     sqrt(buf_norm,buf_norm);
 
-    buf_mean /= buffer.size();
+    buf_mean /= corr_buffer.size();
 
-    vector<Mat> corrs;
+    Mat acc_corr = Mat::zeros(frame_size,CV_32FC1);
 
-    for(size_t m = 0; m < buffer.size(); ++m) {
-        Mat buf_corr = Mat::zeros(frame_size,CV_32FC1);
-
-        for(size_t i = 0; i < buffer.size(); ++i) {
-            buf_corr += (buffer[i] - buf_mean) * square_wave(w*i + m);
-        }
-
-        buf_corr /= buf_norm * sqrt(buffer.size());
-
-        corrs.push_back(buf_corr);
-
+    for(size_t i = 0; i < corr_buffer.size(); ++i) {
+        acc_corr += (corr_buffer[i] - buf_mean) * square_wave(w*i);
     }
 
-    auto big_corr = max_element(begin(corrs),end(corrs),[](const Mat &x,const Mat &y) {return sum(x)[0] < sum(y)[0];});
+    acc_corr /= buf_norm * sqrt(corr_buffer.size());
+
+    acc_corr = abs(acc_corr);
+
+    filt_buffer.push_front(acc_corr.clone());
+
+    Mat acc_filt = Mat::zeros(frame_size,CV_32FC1);
+    for(Mat &x : filt_buffer) {
+        acc_filt += x;
+    }
+
+    acc_filt /= 0.5*filt_buffer.size();
+
+
+
+    //adaptiveThreshold(image,image,255,ADAPTIVE_THRESH_MEAN_C,THRESH_BINARY,63,-150);
+    
+    threshold(acc_filt,acc_filt,0.7,1.0,THRESH_BINARY);
+
+    image = image.mul(acc_filt);
+
+    threshold(image,image,0.7,1.0,THRESH_BINARY);
+    
+
+
+
 
     //cout << "Frame" << endl;
 
@@ -78,13 +94,14 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
 
 
 
-    *big_corr *= 128;
-    *big_corr += 128;
-    big_corr->convertTo(image,CV_8UC1);
+    image *= 255;
+//    acc_filt += 128;
+    image.convertTo(image,CV_8UC1);
 
 
-    return optional<Point2f>(); 
-        //getBiggestBlob(image);
+
+
+    return getBiggestBlob(image);
 
 }
 

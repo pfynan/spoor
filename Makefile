@@ -60,7 +60,7 @@
 MY_CFLAGS = --std=c++11 $(shell pkg-config --cflags opencv)
 
 # The linker options.
-MY_LIBS   = $(shell pkg-config --libs opencv)
+MY_LIBS   = $(shell pkg-config --libs opencv) -lboost_system -lprofiler
 
 # The pre-processor options used by the cpp (man cpp for more).
 CPPFLAGS  = -Wall

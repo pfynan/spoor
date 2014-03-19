@@ -56,8 +56,17 @@ inline boost::optional<cv::Point2f> getBiggestBlob(const cv::Mat &image) {
 
 }
 
+inline int mod(int a, int b) {
+    return ((a%b)+b)%b;
+}
+
 // Mean of 0; ||square_wave|| = sqrt(N)
 inline float square_wave(int t) {
     return 4.0*std::floor(t/(2*M_PI)) - 2.0*std::floor(2.0*t/(2*M_PI)) + 1.0;
 }
 
+inline float bit_pattern(int i, char pattern,float bps,float sample_rate) {
+    int N = sample_rate / bps * 8;
+    float Tbit = sample_rate / bps;
+    return (float) ((pattern >> ((int)floor(mod(i,N)/Tbit))) & 1);
+}

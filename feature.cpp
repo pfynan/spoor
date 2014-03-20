@@ -57,6 +57,9 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
 
     image /= 255;
 
+    Size work_size = frame_size;//Size((image.cols + 16)/32,(image.rows + 16)/32);
+    //resize(image,image,work_size);
+
 
     corr_buffer.push_back(image.clone()); // Oh honey. This is going to churn the heap.
 
@@ -67,7 +70,7 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
     buf_mean = stats.first;
     buf_norm = stats.second;
 
-    Mat acc_corr = Mat::zeros(frame_size,CV_32FC1);
+    Mat acc_corr = Mat::zeros(work_size,CV_32FC1);
 
     for(size_t i = 0; i < corr_buffer.size(); ++i) {
         acc_corr += (corr_buffer[i] - buf_mean) * (bit_pattern(-i,221,8,25)*2-1);
@@ -75,6 +78,8 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
 
     //acc_corr /= buf_norm * sqrt(corr_buffer.size());
     
+
+    logger.log("meaned", image - buf_mean + 0.5);
     logger.log("acc_corr", acc_corr);
 
     threshold(acc_corr,acc_corr,0.4,1.0,THRESH_BINARY);
@@ -84,7 +89,7 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
 
     filt_buffer.push_front(acc_corr.clone());
 
-    Mat acc_filt = Mat::zeros(frame_size,CV_32FC1);
+    Mat acc_filt = Mat::zeros(work_size,CV_32FC1);
     for(Mat &x : filt_buffer) {
         acc_filt += x;
     }
@@ -115,6 +120,7 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
         //waitKey(1);
     //}
 
+    //resize(image,image,frame_size);
 
 
     image *= 255;

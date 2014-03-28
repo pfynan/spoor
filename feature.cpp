@@ -17,16 +17,44 @@ using namespace boost;
 using namespace cv;
 
 
-vector<float> conv(vector<float> f, vector<float> g) {
-    int N = f.size();
-    vector<float> ret(N);
-    fill(ret.begin(),ret.end(),0);
-    for(int n = 0; n < N; ++n) {
-        for(int m = 0; m < N; ++m) {
-            ret[n] += f[m] * g[mod(n-m,N)];
-        }
+boost::optional<cv::Point2f> getBiggestBlob(const cv::Mat &image) {
+    using namespace cv;
+    using namespace boost;
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    findContours(image, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+
+    vector<Moments> mu(contours.size() );
+    for( size_t i = 0; i < contours.size(); i++ ) { 
+        mu[i] = moments( contours[i], false );
     }
-    return ret;
+
+    ///  Get the mass centers:
+    vector<Point2f> mc( contours.size() );
+    for( size_t i = 0; i < contours.size(); i++ ) { 
+        mc[i] = Point2f( mu[i].m10/mu[i].m00 , mu[i].m01/mu[i].m00 );
+    }
+
+  /*for( size_t  i = 0; i< contours.size(); i++ )
+      {
+      Scalar color = Scalar(0,255,0);
+      drawContours( disp, contours, i, color, 2, 8, hierarchy, 0, Point() );
+
+      }*/
+
+    auto blob = max_element(begin(mu),end(mu),[](Moments a, Moments b){ return a.m00 < b.m00; });
+
+    Point2f measurement;
+
+    if(blob != end(mu) && blob->m00 > 40) {
+        measurement.x = blob->m10/blob->m00;
+        measurement.y = blob->m01/blob->m00;
+        return optional<Point2f>(measurement);
+
+    } else {
+        return optional<Point2f>();
+    }
+
 }
 
 
@@ -41,8 +69,11 @@ FeatureExtract::FeatureExtract(Size size, ImLogger &log) :
     fs = 25;
     w = 4.0/fs * 2.0 * M_PI;
 
-    // Precompute filter for faster computation
 
+    for (int i = 0; i < length; ++i)
+    {
+        corr_buffer.push_back(Mat::zeros(frame_size,CV_32FC1));
+    }
 
 }
 
@@ -61,76 +92,70 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
     //resize(image,image,work_size);
 
 
-    corr_buffer.push_back(image.clone()); // Oh honey. This is going to churn the heap.
 
     Mat buf_mean,buf_norm;
 
+
     auto stats = getStatistics(begin(corr_buffer),end(corr_buffer));
+
+    corr_buffer.push_back(image.clone()); // Oh honey. This is going to churn the heap.
 
     buf_mean = stats.first;
     buf_norm = stats.second;
 
-    Mat acc_corr = Mat::zeros(work_size,CV_32FC1);
 
-    for(size_t i = 0; i < corr_buffer.size(); ++i) {
+    /*for(size_t i = 0; i < corr_buffer.size(); ++i) {
         acc_corr += (corr_buffer[i] - buf_mean) * (bit_pattern(-i,221,8,25)*2-1);
-    }
+    }*/
 
     //acc_corr /= buf_norm * sqrt(corr_buffer.size());
     
+    Mat sd;
+    sqrt(buf_norm,sd);
 
     logger.log("meaned", image - buf_mean + 0.5);
+    logger.log("variance", buf_norm);
+    logger.log("sigmas", (image - buf_mean) / sd);
+
+    Mat bg_time = (buf_mean);
+
+    logger.log("bg_time", bg_time);
+
+    Mat bg_space;
+    blur(image,bg_space,Size(11,11));
+    logger.log("bg_space", image - bg_space + 0.5);
+
+    //acc_corr = acc_corr * 0.75 + image * 0.25;
+    Mat acc_corr = (image - bg_time)/sd;
+    acc_corr = acc_corr.mul(image-bg_space);
+
+
     logger.log("acc_corr", acc_corr);
 
-    threshold(acc_corr,acc_corr,0.4,1.0,THRESH_BINARY);
-
+    //threshold(acc_corr,acc_corr,0.2,1,THRESH_BINARY);
     logger.log("thresh1", acc_corr);
 
+    //acc_corr *= 0.5;
+    acc_corr *= 255;
+    acc_corr.convertTo(acc_corr,CV_8UC1);
 
-    filt_buffer.push_front(acc_corr.clone());
+    logger.log("acc_corri", acc_corr);
 
-    Mat acc_filt = Mat::zeros(work_size,CV_32FC1);
-    for(Mat &x : filt_buffer) {
-        acc_filt += x;
-    }
-
-    acc_filt /= 0.5*filt_buffer.size();
-
-    acc_filt = acc_filt;
-
-    logger.log("acc_filt", acc_filt);
-
-
-    //adaptiveThreshold(image,image,255,ADAPTIVE_THRESH_MEAN_C,THRESH_BINARY,63,-150);
     
+    /*Mat gb,bb;
+    Size blur_size = Size(51,51);
 
-    image = acc_filt;
+    GaussianBlur(acc_corr,gb,blur_size,0);
+    logger.log("gb", gb);
+    blur(acc_corr,bb,blur_size);
+    logger.log("bb", bb);
+    */
 
-    threshold(image,image,0.5,1.0,THRESH_BINARY);
-     
-
-    logger.log("thresh2", image);
-
-
-
-    //cout << "Frame" << endl;
-
-    //if(big_corr != end(corrs)) {
-        //imshow("Out",*big_corr * 0.5 + 0.5);
-        //waitKey(1);
-    //}
-
-    //resize(image,image,frame_size);
-
-
-    image *= 255;
-//    acc_filt += 128;
-    image.convertTo(image,CV_8UC1);
+    //adaptiveThreshold(acc_corr,acc_corr,255,ADAPTIVE_THRESH_MEAN_C,THRESH_BINARY,5,0);
 
 
 
-
-    return getBiggestBlob(image);
+    return getBiggestBlob(acc_corr);
     //return optional<Point2f>();
 
 }

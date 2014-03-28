@@ -27,6 +27,7 @@ class FeatureExtract {
         std::vector<float> filt_coeffs;
 
         ImLogger &logger;
+
         
 
 };
@@ -35,6 +36,10 @@ template<class T>
 std::pair<cv::Mat,cv::Mat> getStatistics(T first,T last) {
     using namespace cv;
     Mat buf_mean, buf_norm;
+
+    if(first == last)
+        return std::make_pair(buf_mean, buf_norm);
+
     buf_mean = Mat::zeros(first->size(),CV_32FC1);
     buf_norm = Mat::zeros(first->size(),CV_32FC1);
 

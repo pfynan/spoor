@@ -124,6 +124,9 @@ int main(int argc,char *argv[]) {
         optional<Point2f> fp = fe(image);
         Point2f pp = tr(fp);
 
+        if(fp)
+            cross(disp, *fp);
+
         cross( disp , pp );
         
 

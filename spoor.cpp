@@ -12,6 +12,8 @@
 
 //#include "cvplot.hpp"
 
+#include "franken.h"
+
 #include <boost/asio.hpp>
 #include <boost/timer/timer.hpp>
 
@@ -103,19 +105,23 @@ int main(int argc,char *argv[]) {
     FeatureExtract fe(frame_size,log);
     Tracking tr;
 
-    /*
+    
     using boost::asio::ip::tcp;
     boost::asio::io_service io_service;
 
     tcp::socket s(io_service);
     tcp::resolver resolver(io_service);
-    boost::asio::connect(s, resolver.resolve({"127.0.0.1", "9090"}));
-    */
+
+    system::error_code ec;
+    boost::asio::connect(s, resolver.resolve({"127.0.0.1", "9090"}),ec);
+    if(ec) {
+        cerr << "Could not connect to light" << endl;
+    }
+
 
     int frames = 0;
 
-    //timer::cpu_timer
-
+    timer::cpu_timer timer;
     while(capture >> image, !image.empty()) {
         
 
@@ -130,29 +136,32 @@ int main(int argc,char *argv[]) {
         cross( disp , pp );
         
 
-            //imshow("Out",disp);
-            //if(waitKey(1) == 27) break;
+        asio::streambuf buf;
+        ostream stream(&buf);
+
+
+        writeSetTargetAngle(stream,pp);
         
 
-/*
-        char net_buffer[6];
+        const char header = buf.size();
 
-        net_buffer[0] = 5;
-        net_buffer[1] = 1;
-        *((short*)(net_buffer + 2)) = htons((int)pp.x);
-        *((short*)(net_buffer + 4)) = htons((int)pp.y);
-
-        
-
-        boost::asio::write(s,boost::asio::buffer(net_buffer,6));
-        */
+        std::vector<boost::asio::const_buffer> buffers;
+        buffers.push_back( boost::asio::buffer(&header, sizeof(header)) );
+        buffers.push_back( buf.data() );
+        boost::asio::write(s,buffers,ec);
 
         
-        //cvtColor(image,image,CV_GRAY2BGR);
         writer << disp;
         frames++;
 
     }
+
+    timer::cpu_times const elapsed(timer.elapsed());
+    timer::nanosecond_type const wall(elapsed.wall);
+
+    double fps = (double) frames / ((double) wall * 1e-9);
+
+    cout << fps << " fps" << endl;
 
 
     return 0;

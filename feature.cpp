@@ -16,10 +16,7 @@ using namespace std;
 using namespace boost;
 using namespace cv;
 
-
-boost::optional<cv::Point2f> getBiggestBlob(const cv::Mat &image) {
-    using namespace cv;
-    using namespace boost;
+vector<pair<Point2f,float>> getBlobs(Mat &image) {
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
     findContours(image, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
@@ -30,40 +27,31 @@ boost::optional<cv::Point2f> getBiggestBlob(const cv::Mat &image) {
     }
 
     ///  Get the mass centers:
-    vector<Point2f> mc( contours.size() );
+    vector<pair<Point2f,float>> mc( contours.size() );
     for( size_t i = 0; i < contours.size(); i++ ) { 
-        mc[i] = Point2f( mu[i].m10/mu[i].m00 , mu[i].m01/mu[i].m00 );
+        mc[i] = make_pair(Point2f( mu[i].m10/mu[i].m00 , mu[i].m01/mu[i].m00 ),mu[i].m00);
     }
-
-  /*for( size_t  i = 0; i< contours.size(); i++ )
-      {
-      Scalar color = Scalar(0,255,0);
-      drawContours( disp, contours, i, color, 2, 8, hierarchy, 0, Point() );
-
-      }*/
-
-    auto blob = max_element(begin(mu),end(mu),[](Moments a, Moments b){ return a.m00 < b.m00; });
-
-    Point2f measurement;
-
-    if(blob != end(mu) && blob->m00 > 40) {
-        measurement.x = blob->m10/blob->m00;
-        measurement.y = blob->m01/blob->m00;
-        return optional<Point2f>(measurement);
-
-    } else {
-        return optional<Point2f>();
-    }
-
+    return mc;
 }
-
-
 
 FeatureExtract::FeatureExtract(Size size, ImLogger &log) : 
     frame_size(size),
     logger(log),
-    bg_sub(100,3,0.1,30*0.5)
+    bg_sub(100,3,0.1,30*0.5),
+    KF(4,2,0)
 {
+    KF.transitionMatrix = *(Mat_<float>(4, 4) << 
+            1, 0, 1, 0,
+            0, 1, 0, 1,
+            0, 0, 1, 0,
+            0, 0, 0, 1);
+
+    setIdentity(KF.measurementMatrix);
+    setIdentity(KF.processNoiseCov, Scalar::all(1e-2));
+    setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
+    setIdentity(KF.errorCovPost, Scalar::all(1e+4));
+
+    randn(KF.statePost, Scalar::all(0), Scalar::all(100));
 
 }
 
@@ -73,16 +61,6 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
     //timer::auto_cpu_timer time_it("%u\n"); 
 
     cvtColor(image,image,CV_BGR2GRAY);
-    //image.convertTo(image,CV_32FC1);
-    //normalize(image,image, 0, 1, NORM_MINMAX, CV_32FC1);
-
-    //image /= 255;
-
-    //Size work_size = frame_size;//Size((image.cols + 16)/32,(image.rows + 16)/32);
-    //resize(image,image,work_size);
-
-
-
 
     Mat mog;
 
@@ -90,12 +68,34 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
 
     logger.log("mog", mog);
 
+    /*
+     * MOG that crap
+     * Find nearest neighbor to expected location
+     * Check what series is correlated to
+     * *or* pick nearest neighbor based on what code it is
+     */
+
+    auto blobs = getBlobs(mog);
+
+    vector<pair<Point2f,float>> distance(blobs.size());
+
+    Mat prediction = KF.predict();
+    Point2f expected = Point2f(prediction(Range(0,2),Range(0,1)));;
+
+    transform(begin(blobs),end(blobs),begin(distance),[&](pair<Point2f,float> x) { return make_pair(x.first,norm(expected - x.first)); } );
+
+    auto nearest = min_element(begin(distance),end(distance),[=](pair<Point2f,float> x,pair<Point2f,float> y) { return x.second < y.second; });
+
+    if(nearest != end(distance)) {
+        KF.correct(Mat(nearest->first));
+    }
+
+    
 
 
+    
 
-
-    return getBiggestBlob(mog);
-    //return optional<Point2f>();
+    return optional<Point2f>(Point2f(KF.statePost(Range(0,2),Range(0,1))));
 
 }
 

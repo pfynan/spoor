@@ -19,6 +19,7 @@ class FeatureExtract {
 
         ImLogger &logger;
         cv::BackgroundSubtractorMOG bg_sub;
+        cv::KalmanFilter KF;
 
         
 

@@ -29,6 +29,7 @@ set( PROJECT_SOURCES
     spoor.cpp
     thrift.cpp
     tracking.cpp
+    vision.cpp
     gen-cpp/shoggoth_constants.cpp
     gen-cpp/shoggoth_types.cpp
     gen-cpp/Tracking.cpp

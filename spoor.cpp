@@ -14,10 +14,14 @@
 
 #include "franken.h"
 
+#include "thrift.h"
+
 #include <boost/asio.hpp>
 #include <boost/timer/timer.hpp>
 
 #include <boost/program_options.hpp>
+
+#include <boost/thread.hpp>
 
 using namespace std;
 using namespace cv;
@@ -27,6 +31,23 @@ namespace po = boost::program_options;
 
 
 RNG rng(12345);
+
+/*
+ * Threads:
+ *
+ * Thrift  -|--| 
+ * Franken -|--| // Next
+ * Processing--|-|  // Wait
+ * Gstreamer-----|  // Wait
+ *
+ * ...
+ *
+ * Jesus Christ almighty!
+ *
+ */
+
+
+
 
 
 int main(int argc,char *argv[]) {
@@ -117,6 +138,12 @@ int main(int argc,char *argv[]) {
     if(ec) {
         cerr << "Could not connect to light" << endl;
     }
+
+    
+
+    thread thrift_thread(thriftThread);
+
+
 
 
     int frames = 0;

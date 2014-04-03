@@ -13,12 +13,14 @@ find_package( Threads )
 find_package( Boost 1.55 COMPONENTS system timer program_options thread REQUIRED )
 find_package( OpenCV 1.4.8 REQUIRED )
 find_package( Thrift REQUIRED )
+find_package( GStreamer REQUIRED )
 
 include_directories(
   SYSTEM
   ${Boost_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIR}
   ${THRIFT_INCLUDE_DIR}
+  ${GSTREAMER_INCLUDE_DIRS}
   )
 
 
@@ -44,6 +46,7 @@ target_link_libraries( spoor
     ${Boost_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${THRIFT_LIBRARIES}
+    ${GSTREAMER_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     )
 

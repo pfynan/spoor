@@ -9,7 +9,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../cmake)
 add_definitions( -std=c++0x )
 
 find_package( Threads )
-find_package( Boost 1.55 COMPONENTS system REQUIRED )
+find_package( Boost 1.55 COMPONENTS system thread REQUIRED )
 find_package( Thrift REQUIRED )
 
 include_directories(

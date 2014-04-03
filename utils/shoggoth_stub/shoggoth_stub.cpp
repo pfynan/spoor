@@ -17,8 +17,9 @@ using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
 
 
+typedef tokenizer<char_separator<char>>::iterator tok_it;
 
-void parseExit(tokenizer<char_separator<char>>::iterator cur_tok, TrackingClient&) {
+void parseExit(tok_it cur_tok, TrackingClient&) {
     exit(0);
 }
 
@@ -31,8 +32,13 @@ void parse_get_pos(tokenizer<char_separator<char>>::iterator cur_tok, TrackingCl
 
 
 
-void parse(tokenizer<char_separator<char>>::iterator cur_tok, TrackingClient &client) {
-    map<string,function<void(tokenizer<char_separator<char>>::iterator,TrackingClient&)>> lut = 
+void parse(string &command, TrackingClient &client) {
+    char_separator<char> sep(" ");
+    tokenizer<char_separator<char>> tokens(command, sep);
+
+    tok_it cur_tok = tokens.begin();
+
+    map<string,function<void(tok_it,TrackingClient&)>> lut = 
     {{"get_pos", parse_get_pos}
     ,{"exit", parseExit}
     };
@@ -56,18 +62,20 @@ int main(int argc, char *argv[])
   TrackingClient client(protocol);
 
   transport->open();
+
     while(true) {
 
         string command;
 
         cout << "> " << flush;
-        getline(cin,command);
 
-        char_separator<char> sep(" ");
-        tokenizer<char_separator<char>> tokens(command, sep);
+        if(!getline(cin,command))
+            break;
 
-        parse(tokens.begin(),client);
+
+        parse(command,client);
         
+
     }
 
     transport->close();

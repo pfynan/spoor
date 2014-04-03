@@ -3,8 +3,33 @@
 
 #include <arpa/inet.h>
 
+#include <boost/asio.hpp>
+#include <boost/thread.hpp>
+
 using namespace std;
 using namespace cv;
+using namespace boost;
+
+mutex sm_mutex;
+
+void sendMessage(std::function<void(std::ostream&)> fn, boost::asio::ip::tcp::socket &s) {
+
+    lock_guard<mutex> lock( sm_mutex );
+    asio::streambuf buf;
+    ostream stream(&buf);
+
+
+    fn(stream);
+
+    const char header = buf.size();
+
+    std::vector<boost::asio::const_buffer> buffers;
+    buffers.push_back( boost::asio::buffer(&header, sizeof(header)) );
+    buffers.push_back( buf.data() );
+
+    boost::asio::write(s,buffers);
+
+}
 
 void writeSetTargetAngle(ostream &buf, Point2f pp) {
     

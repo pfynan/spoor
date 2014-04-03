@@ -8,7 +8,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS 1 )
 add_definitions( -std=c++0x -DNO_OPENCV)
 
 find_package( Threads )
-find_package( Boost 1.55 COMPONENTS system REQUIRED )
+find_package( Boost 1.55 COMPONENTS system thread REQUIRED )
 
 include_directories(
   SYSTEM

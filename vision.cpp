@@ -108,21 +108,10 @@ void visionThread(po::variables_map &vm) {
             cross(disp, *fp);
 
         cross( disp , pp );
-        
 
-        asio::streambuf buf;
-        ostream stream(&buf);
+        using namespace std::placeholders;
+        sendMessage(bind(writeSetTargetAngle,_1,pp),s);
 
-
-        writeSetTargetAngle(stream,pp);
-        
-
-        const char header = buf.size();
-
-        std::vector<boost::asio::const_buffer> buffers;
-        buffers.push_back( boost::asio::buffer(&header, sizeof(header)) );
-        buffers.push_back( buf.data() );
-        boost::asio::write(s,buffers,ec);
 
         
         writer << disp;

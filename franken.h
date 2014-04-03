@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include <boost/asio.hpp>
 
 
 #ifdef NO_OPENCV
@@ -31,6 +32,7 @@ enum class MessageType
     , SET_LIGHT_ONOFF = 3
     };
 
+void sendMessage(std::function<void(std::ostream&)> fn, boost::asio::ip::tcp::socket &s);
 void writeSetTargetAngle(std::ostream &buf, cv::Point2f pp);
 void writeLightIntensity(std::ostream &buf, ushort intens);
 void writeLightOnOff(std::ostream &buf, bool onoff);

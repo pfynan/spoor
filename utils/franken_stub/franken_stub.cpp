@@ -8,19 +8,28 @@
 using namespace boost;
 using namespace std;
 
-void parseSetAngle(tokenizer<char_separator<char>>::iterator cur_tok, ostream &os) {
+typedef tokenizer<char_separator<char>>::iterator tok_it;
+typedef boost::asio::ip::tcp::socket sock;
+
+void parseSetAngle(tok_it cur_tok, sock &s) {
+    using namespace std::placeholders;
     float x = lexical_cast<float>(*cur_tok);
     float y = lexical_cast<float>(*(++cur_tok));
-    writeSetTargetAngle(os,cv::Point2f(x,y));
+    sendMessage(bind(writeSetTargetAngle,_1,cv::Point2f(x,y)),s);
 }
 
-void parseExit(tokenizer<char_separator<char>>::iterator cur_tok, ostream &os) {
+void parseExit(tok_it cur_tok, sock &s) {
     exit(0);
 }
 
 
-void parse(tokenizer<char_separator<char>>::iterator cur_tok, ostream &os) {
-    map<string,function<void(tokenizer<char_separator<char>>::iterator,ostream&)>> lut = 
+void parse(string &command, sock &s) {
+    char_separator<char> sep(" ");
+    tokenizer<char_separator<char>> tokens(command, sep);
+
+    tok_it cur_tok = tokens.begin();
+
+    map<string,function<void(tok_it,sock&)>> lut = 
     {{"angle", parseSetAngle}
     //,{"intens", parseSetIntens}
     //,{"on", parseOn}
@@ -34,7 +43,7 @@ void parse(tokenizer<char_separator<char>>::iterator cur_tok, ostream &os) {
         throw std::runtime_error("Unknown command");
     }
 
-    (c->second)(++cur_tok,os);
+    (c->second)(++cur_tok,s);
 }
 
 
@@ -69,23 +78,13 @@ int main(int argc, char *argv[])
         string command;
 
         cout << "> " << flush;
-        getline(cin,command);
 
-        char_separator<char> sep(" ");
-        tokenizer<char_separator<char>> tokens(command, sep);
+        if(!getline(cin,command))
+            break;
 
-        asio::streambuf buf;
-        ostream stream(&buf);
 
-        parse(tokens.begin(),stream);
+        parse(command,s);
         
-
-        const char header = buf.size();
-
-        std::vector<boost::asio::const_buffer> buffers;
-        buffers.push_back( boost::asio::buffer(&header, sizeof(header)) );
-        buffers.push_back( buf.data() );
-        boost::asio::write(s,buffers,ec);
 
     }
 

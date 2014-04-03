@@ -1,3 +1,5 @@
+#include "shoggoth.h"
+#include "franken.h"
 
 #include "gen-cpp/Tracking.h"
 #include <thrift/protocol/TBinaryProtocol.h>
@@ -36,6 +38,11 @@ class TrackingHandler : virtual public TrackingIf {
   void getActualPos(Coordinates& _return) {
     // Your implementation goes here
     printf("getActualPos\n");
+  }
+
+  void setOnOff(const bool state) {
+    // Your implementation goes here
+    printf("setOnOff\n");
   }
 
 };

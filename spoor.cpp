@@ -6,7 +6,7 @@
 
 //#include "cvplot.hpp"
 
-#include "thrift.h"
+#include "shoggoth.h"
 #include "vision.h"
 
 

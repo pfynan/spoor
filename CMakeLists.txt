@@ -27,7 +27,7 @@ set( PROJECT_SOURCES
     franken.cpp
     ImLogger.cpp
     spoor.cpp
-    thrift.cpp
+    shoggoth.cpp
     tracking.cpp
     vision.cpp
     gen-cpp/shoggoth_constants.cpp

@@ -15,41 +15,43 @@ using namespace ::apache::thrift::server;
 using boost::shared_ptr;
 
 class TrackingHandler : virtual public TrackingIf {
- public:
-  TrackingHandler() {
-    // Your initialization goes here
-  }
+    shared_ptr<FrankenConnection> franken_conn;
+    public:
+        TrackingHandler(shared_ptr<FrankenConnection> _franken_conn) {
+            franken_conn = _franken_conn;
+        }
 
-  void setMode(const PointMode::type mode) {
-    // Your implementation goes here
-    printf("setMode\n");
-  }
+        void setMode(const PointMode::type mode) {
+            // Your implementation goes here
+            printf("setMode\n");
+        }
 
-  PointMode::type getMode() {
-    // Your implementation goes here
-    printf("getMode\n");
-  }
+        PointMode::type getMode() {
+            // Your implementation goes here
+            printf("getMode\n");
+        }
 
-  void setPos(const int16_t target) {
-    // Your implementation goes here
-    printf("setPos\n");
-  }
+        void setPos(const int16_t target) {
+            // Your implementation goes here
+            printf("setPos\n");
+        }
 
-  void getActualPos(Coordinates& _return) {
-    // Your implementation goes here
-    printf("getActualPos\n");
-  }
+        void getActualPos(Coordinates& _return) {
+            // Your implementation goes here
+            printf("getActualPos\n");
+        }
 
-  void setOnOff(const bool state) {
-    // Your implementation goes here
-    printf("setOnOff\n");
-  }
+        void setOnOff(const bool state) {
+            printf("setOnOff\n");
+            franken_conn->writeLightOnOff(state);
+
+        }
 
 };
 
-void thriftThread() {
+void thriftThread(boost::shared_ptr<FrankenConnection> franken_conn) {
   int port = 9091;
-  shared_ptr<TrackingHandler> handler(new TrackingHandler());
+  shared_ptr<TrackingHandler> handler(new TrackingHandler(franken_conn));
   shared_ptr<TProcessor> processor(new TrackingProcessor(handler));
   shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
   shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());

@@ -3,18 +3,29 @@
 
 #include <arpa/inet.h>
 
-#include <boost/asio.hpp>
-#include <boost/thread.hpp>
 
 using namespace std;
 using namespace cv;
 using namespace boost;
 
-mutex sm_mutex;
+FrankenConnection::FrankenConnection() : io_service(), s(io_service) {
+    lock_guard<mutex> lock( mtx ); // Deadlock in constructor?
 
-void sendMessage(std::function<void(std::ostream&)> fn, boost::asio::ip::tcp::socket &s) {
+    using boost::asio::ip::tcp;
 
-    lock_guard<mutex> lock( sm_mutex );
+    tcp::resolver resolver(io_service);
+
+    system::error_code ec;
+    boost::asio::connect(s, resolver.resolve({"127.0.0.1", "9090"}),ec);
+    if(ec) {
+        cerr << "Could not connect to light" << endl;
+    }
+}
+
+
+void FrankenConnection::sendMessage(std::function<void(std::ostream&)> fn) {
+
+    lock_guard<mutex> lock( mtx );
     asio::streambuf buf;
     ostream stream(&buf);
 
@@ -31,26 +42,30 @@ void sendMessage(std::function<void(std::ostream&)> fn, boost::asio::ip::tcp::so
 
 }
 
-void writeSetTargetAngle(ostream &buf, Point2f pp) {
-    
-        // Message type
-        buf.put(static_cast<char>(MessageType::SET_TARGET_ANGLE));
+void FrankenConnection::writeSetTargetAngle(Point2f pp) {
 
-        // X and Y coordinates
-        short x = htons((int)pp.x);
-        short y = htons((int)pp.y);
-        buf.write((char*)&x,sizeof(short));
-        buf.write((char*)&y,sizeof(short));
+    sendMessage([=] (ostream &buf) {
+            // Message type
+            buf.put(static_cast<char>(MessageType::SET_TARGET_ANGLE));
 
-        for (int i = 0; i < 2; ++i)
-        {
-            buf.put(0);
-        }
+            // X and Y coordinates
+            short x = htons((int)pp.x);
+            short y = htons((int)pp.y);
+            buf.write((char*)&x,sizeof(short));
+            buf.write((char*)&y,sizeof(short));
+
+            for (int i = 0; i < 2; ++i)
+            {
+                buf.put(0);
+            }
+
+    });
 
 }
 
-void writeLightIntensity(ostream &buf, ushort intens) {
+void FrankenConnection::writeLightIntensity(ushort intens) {
     
+    sendMessage([=] (ostream &buf) {
         // Message type
         buf.put(static_cast<char>(MessageType::SET_LIGHT_INTENSITY));
 
@@ -60,11 +75,13 @@ void writeLightIntensity(ostream &buf, ushort intens) {
         {
             buf.put(0);
         }
+    });
 
 }
 
-void writeLightOnOff(ostream &buf, bool onoff) {
+void FrankenConnection::writeLightOnOff(bool onoff) {
     
+    sendMessage([=] (ostream &buf) {
         // Message type
         buf.put(static_cast<char>(MessageType::SET_LIGHT_ONOFF));
 
@@ -74,6 +91,7 @@ void writeLightOnOff(ostream &buf, bool onoff) {
         {
             buf.put(0);
         }
+    });
 
 }
 

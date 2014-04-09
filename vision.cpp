@@ -1,6 +1,5 @@
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
-#include <boost/asio.hpp>
 
 #include <iostream>
 
@@ -21,7 +20,7 @@ using namespace boost;
 
 namespace po = boost::program_options;
 
-void visionThread(po::variables_map &vm) {
+void visionThread(po::variables_map &vm, boost::shared_ptr<FrankenConnection> franken_conn) {
 
     string outfile = "out.avi";
 
@@ -75,18 +74,6 @@ void visionThread(po::variables_map &vm) {
     Tracking tr;
 
     
-    using boost::asio::ip::tcp;
-    boost::asio::io_service io_service;
-
-    tcp::socket s(io_service);
-    tcp::resolver resolver(io_service);
-
-    system::error_code ec;
-    boost::asio::connect(s, resolver.resolve({"127.0.0.1", "9090"}),ec);
-    if(ec) {
-        cerr << "Could not connect to light" << endl;
-    }
-
     
 
 
@@ -109,8 +96,7 @@ void visionThread(po::variables_map &vm) {
 
         cross( disp , pp );
 
-        using namespace std::placeholders;
-        sendMessage(bind(writeSetTargetAngle,_1,pp),s);
+        franken_conn->writeSetTargetAngle(pp);
 
 
         

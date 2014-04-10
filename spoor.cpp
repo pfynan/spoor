@@ -8,6 +8,7 @@
 
 #include "shoggoth.h"
 #include "vision.h"
+#include "franken.h"
 
 
 #include <boost/program_options.hpp>
@@ -59,8 +60,12 @@ int main(int argc,char *argv[]) {
     }
 
 
-    thread thrift_thread(thriftThread);
-    thread vision_thread(visionThread,vm);
+    boost::shared_ptr<FrankenConnection> franken_conn(new FrankenConnection);
+
+    boost::shared_ptr<Vision> vision(new Vision(vm,franken_conn));
+
+    thread thrift_thread(thriftThread,franken_conn,vision);
+    thread vision_thread(&Vision::run,vision);
     
     vision_thread.join();
 

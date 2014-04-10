@@ -67,8 +67,12 @@ int main(int argc, char *argv[])
     tcp::socket s(io_service);
     tcp::resolver resolver(io_service);
 
+    tcp::resolver::query query(tcp::v4(), host, port);
+    tcp::resolver::iterator iterator = resolver.resolve(query);
+
     system::error_code ec;
-    boost::asio::connect(s, resolver.resolve({host, port}),ec);
+    s.connect(*iterator,ec);
+    //boost::asio::connect(s, resolver.resolve({host, port}),ec);
     if(ec) {
         cerr << "Could not connect to light" << endl;
     }

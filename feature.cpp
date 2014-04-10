@@ -34,7 +34,7 @@ vector<pair<Point2f,float>> getBlobs(Mat &image) {
     return mc;
 }
 
-FeatureExtract::FeatureExtract(Size size, ImLogger &log) : 
+FeatureExtract::FeatureExtract(Size size, boost::shared_ptr<ImLogger> log) : 
     frame_size(size),
     logger(log),
     bg_sub(100,3,0.1,30*0.5),
@@ -66,7 +66,7 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& image)
 
     bg_sub(image,mog);
 
-    logger.log("mog", mog);
+    logger->log("mog", mog);
 
     /*
      * MOG that crap

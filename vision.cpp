@@ -1,6 +1,5 @@
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
-#include <boost/asio.hpp>
 
 #include <iostream>
 
@@ -21,13 +20,11 @@ using namespace boost;
 
 namespace po = boost::program_options;
 
-void visionThread(po::variables_map &vm) {
-
+Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) {
+    franken_conn = _franken_conn;
     string outfile = "out.avi";
 
 
-    VideoCapture capture;
-    
     capture.open(vm["in"].as<string>());
 
     if(!capture.isOpened()) {
@@ -36,8 +33,8 @@ void visionThread(po::variables_map &vm) {
     }
 
 
-    Size frame_size = Size( capture.get(CV_CAP_PROP_FRAME_WIDTH)
-                          , capture.get(CV_CAP_PROP_FRAME_HEIGHT));
+    frame_size = Size( capture.get(CV_CAP_PROP_FRAME_WIDTH)
+                     , capture.get(CV_CAP_PROP_FRAME_HEIGHT));
     
     map<string,string> logmap;
 
@@ -58,38 +55,22 @@ void visionThread(po::variables_map &vm) {
             logmap.insert(make_pair(hooks[i],hooks[i] + ".avi"));
     }
           
-    ImLogger log(logmap,capture.get(CV_CAP_PROP_FPS),frame_size);
+    log = boost::shared_ptr<ImLogger>(new ImLogger(logmap,capture.get(CV_CAP_PROP_FPS),frame_size));
 
-    VideoWriter writer;
-        
     writer.open
         ( outfile
           , CV_FOURCC('F','M','P','4')
           , capture.get(CV_CAP_PROP_FPS)
           , frame_size);
 
+}
+
+void Vision::run() {
     Mat image;
     namedWindow("Out",1);
 
     FeatureExtract fe(frame_size,log);
     Tracking tr;
-
-    
-    using boost::asio::ip::tcp;
-    boost::asio::io_service io_service;
-
-    tcp::socket s(io_service);
-    tcp::resolver resolver(io_service);
-
-    system::error_code ec;
-    boost::asio::connect(s, resolver.resolve({"127.0.0.1", "9090"}),ec);
-    if(ec) {
-        cerr << "Could not connect to light" << endl;
-    }
-
-    
-
-
 
 
 
@@ -109,8 +90,12 @@ void visionThread(po::variables_map &vm) {
 
         cross( disp , pp );
 
-        using namespace std::placeholders;
-        sendMessage(bind(writeSetTargetAngle,_1,pp),s);
+        {
+            lock_guard<mutex> lck(mtx);
+            cur_pos = fp;
+        }
+
+        franken_conn->writeSetTargetAngle(pp);
 
 
         

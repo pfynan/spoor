@@ -62,8 +62,10 @@ int main(int argc,char *argv[]) {
 
     boost::shared_ptr<FrankenConnection> franken_conn(new FrankenConnection);
 
-    thread thrift_thread(thriftThread,franken_conn);
-    thread vision_thread(visionThread,vm,franken_conn);
+    boost::shared_ptr<Vision> vision(new Vision(vm,franken_conn));
+
+    thread thrift_thread(thriftThread,franken_conn,vision);
+    thread vision_thread(&Vision::run,vision);
     
     vision_thread.join();
 

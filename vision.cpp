@@ -20,13 +20,11 @@ using namespace boost;
 
 namespace po = boost::program_options;
 
-void visionThread(po::variables_map &vm, boost::shared_ptr<FrankenConnection> franken_conn) {
-
+Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) {
+    franken_conn = _franken_conn;
     string outfile = "out.avi";
 
 
-    VideoCapture capture;
-    
     capture.open(vm["in"].as<string>());
 
     if(!capture.isOpened()) {
@@ -35,8 +33,8 @@ void visionThread(po::variables_map &vm, boost::shared_ptr<FrankenConnection> fr
     }
 
 
-    Size frame_size = Size( capture.get(CV_CAP_PROP_FRAME_WIDTH)
-                          , capture.get(CV_CAP_PROP_FRAME_HEIGHT));
+    frame_size = Size( capture.get(CV_CAP_PROP_FRAME_WIDTH)
+                     , capture.get(CV_CAP_PROP_FRAME_HEIGHT));
     
     map<string,string> logmap;
 
@@ -57,26 +55,22 @@ void visionThread(po::variables_map &vm, boost::shared_ptr<FrankenConnection> fr
             logmap.insert(make_pair(hooks[i],hooks[i] + ".avi"));
     }
           
-    ImLogger log(logmap,capture.get(CV_CAP_PROP_FPS),frame_size);
+    log = boost::shared_ptr<ImLogger>(new ImLogger(logmap,capture.get(CV_CAP_PROP_FPS),frame_size));
 
-    VideoWriter writer;
-        
     writer.open
         ( outfile
           , CV_FOURCC('F','M','P','4')
           , capture.get(CV_CAP_PROP_FPS)
           , frame_size);
 
+}
+
+void Vision::run() {
     Mat image;
     namedWindow("Out",1);
 
     FeatureExtract fe(frame_size,log);
     Tracking tr;
-
-    
-    
-
-
 
 
 
@@ -95,6 +89,11 @@ void visionThread(po::variables_map &vm, boost::shared_ptr<FrankenConnection> fr
             cross(disp, *fp);
 
         cross( disp , pp );
+
+        {
+            lock_guard<mutex> lck(mtx);
+            cur_pos = fp;
+        }
 
         franken_conn->writeSetTargetAngle(pp);
 

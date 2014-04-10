@@ -2,18 +2,27 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/program_options.hpp>
+#include <boost/thread.hpp>
+#include <boost/optional.hpp>
 #include "franken.h"
+#include "ImLogger.h"
 
-void visionThread(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> franken_conn);
-
-/*
 class Vision
 {
 public:
-    Vision(po::variables_map &vm, std::shared_ptr<FrankenConnection> franken_conn);
-    virtual ~Vision ();
+    Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn);
+    void run();
+    boost::optional<cv::Point2f> getCurPos() {
+        boost::lock_guard<boost::mutex> lock(mtx);
+        return cur_pos;
+    }
 
 private:
-    std::shared_ptr<FrankenConnection> franken_conn;
+    boost::mutex mtx;
+    boost::optional<cv::Point2f> cur_pos;
+    boost::shared_ptr<FrankenConnection> franken_conn;
+    cv::VideoCapture capture;
+    boost::shared_ptr<ImLogger> log;
+    cv::VideoWriter writer;
+    cv::Size frame_size;
 };
-*/

@@ -9,10 +9,11 @@ add_definitions( -std=c++0x )
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-find_package( Threads )
+find_package( Threads REQUIRED)
 find_package( Boost 1.55 COMPONENTS system timer program_options thread REQUIRED )
 find_package( OpenCV 1.4.8 REQUIRED )
 find_package( Thrift REQUIRED )
+find_package( GLIB COMPONENTS gobject gthread REQUIRED )
 find_package( GStreamer REQUIRED )
 
 include_directories(
@@ -20,7 +21,9 @@ include_directories(
   ${Boost_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIR}
   ${THRIFT_INCLUDE_DIR}
+  ${GLIB_INCLUDE_DIRS}
   ${GSTREAMER_INCLUDE_DIRS}
+  ${GSTREAMER_BASE_INCLUDE_DIRS}
   )
 
 
@@ -46,8 +49,12 @@ target_link_libraries( spoor
     ${Boost_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${THRIFT_LIBRARIES}
-    ${GSTREAMER_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
+    ${GLIB_LIBRARIES}
+    ${GLIB_GOBJECT_LIBRARIES}
+    ${GLIB_GTHREAD_LIBRARIES}
+    ${GSTREAMER_LIBRARIES}
+    ${GSTREAMER_BASE_LIBRARIES}
     )
 
 

@@ -14,6 +14,8 @@
 #include "tracking.h"
 #include "franken.h"
 
+#include "cap_gstreamer.h"
+
 using namespace std;
 using namespace cv;
 using namespace boost;
@@ -25,7 +27,7 @@ Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<Fran
     string outfile = "out.avi";
 
 
-    capture.open(vm["in"].as<string>());
+/*    capture.open(vm["in"].as<string>());
 
     if(!capture.isOpened()) {
         cerr << "Can't open input" << endl;
@@ -36,6 +38,7 @@ Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<Fran
     frame_size = Size( capture.get(CV_CAP_PROP_FRAME_WIDTH)
                      , capture.get(CV_CAP_PROP_FRAME_HEIGHT));
     
+
     map<string,string> logmap;
 
     vector<string> hooks;
@@ -62,14 +65,21 @@ Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<Fran
           , CV_FOURCC('F','M','P','4')
           , capture.get(CV_CAP_PROP_FPS)
           , frame_size);
+    */
+    log = boost::shared_ptr<ImLogger>(new ImLogger(std::map<string,string>(),25,Size(0,0)));
 
 }
 
 void Vision::run() {
-    Mat image;
-    namedWindow("Out",1);
 
-    FeatureExtract fe(frame_size,log);
+    CvCapture_GStreamer cap;
+
+    cap.open(3,"video/low1.mkv");
+
+
+
+
+    FeatureExtract fe(Size(640,480),log);
     Tracking tr;
 
 
@@ -77,7 +87,12 @@ void Vision::run() {
     int frames = 0;
 
     timer::cpu_timer timer;
-    while(capture >> image, !image.empty()) {
+    Mat image;
+    while(1) {
+        if(!cap.grabFrame())
+            break;
+
+        image = Mat(cap.retrieveFrame(0));
         
 
         Mat disp;
@@ -99,10 +114,11 @@ void Vision::run() {
 
 
         
-        writer << disp;
+        //writer << disp;
         frames++;
 
     }
+
 
     timer::cpu_times const elapsed(timer.elapsed());
     timer::nanosecond_type const wall(elapsed.wall);

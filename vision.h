@@ -21,8 +21,8 @@ private:
     boost::mutex mtx;
     boost::optional<cv::Point2f> cur_pos;
     boost::shared_ptr<FrankenConnection> franken_conn;
-    cv::VideoCapture capture;
+//    cv::VideoCapture capture;
     boost::shared_ptr<ImLogger> log;
-    cv::VideoWriter writer;
+//    cv::VideoWriter writer;
     cv::Size frame_size;
 };

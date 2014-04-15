@@ -35,6 +35,7 @@ set( PROJECT_SOURCES
     shoggoth.cpp
     tracking.cpp
     vision.cpp
+    cap_gstreamer.cpp
     gen-cpp/shoggoth_constants.cpp
     gen-cpp/shoggoth_types.cpp
     gen-cpp/Tracking.cpp

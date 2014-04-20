@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cv.h>
+#include <highgui.h>
 #include <gst/gst.h>
 #include <gst/video/video.h>
 #include <gst/app/gstappsink.h>
@@ -37,7 +38,6 @@ protected:
     GstElement           *sink;
 
     GstBuffer           *buffer;
-    GstSample           *sample;
     GstCaps            *caps;
     IplImage           *frame;
 };
@@ -65,6 +65,7 @@ protected:
     GstElement* enc;
     GstElement* mux;
     GstElement* color;
+    GstElement* vrate;
     GstBuffer* buffer;
     GstElement* pipeline;
     int input_pix_fmt;

@@ -37,7 +37,7 @@ vector<pair<Point2f,float>> getBlobs(Mat &image) {
 FeatureExtract::FeatureExtract(Size size, boost::shared_ptr<ImLogger> log) : 
     frame_size(size),
     logger(log),
-    bg_sub(100,3,0.1,30*0.5),
+    bg_sub(10,3,0.1,30*0.5),
     KF(4,2,0)
 {
     KF.transitionMatrix = *(Mat_<float>(4, 4) << 

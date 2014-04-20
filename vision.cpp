@@ -74,9 +74,13 @@ void Vision::run() {
 
     CvCapture_GStreamer cap;
 
-    cap.open(3,"video/low1.mkv");
+    if(!cap.open(3,"video/low1.avi"))
+        cerr << "Failed to open" << endl;
 
+    CvVideoWriter_GStreamer out;
 
+    if(!out.open("out.avi",CV_FOURCC('M','P','2','V'),25,Size(640,480),true))
+        cerr << "Failed to open output" << endl;
 
 
     FeatureExtract fe(Size(640,480),log);
@@ -93,6 +97,8 @@ void Vision::run() {
             break;
 
         image = Mat(cap.retrieveFrame(0));
+        if(image.empty())
+            break;
         
 
         Mat disp;
@@ -112,9 +118,10 @@ void Vision::run() {
 
         franken_conn->writeSetTargetAngle(pp);
 
-
         
         //writer << disp;
+        IplImage oframe = IplImage(disp);
+        out.writeFrame(&oframe);
         frames++;
 
     }
@@ -126,6 +133,10 @@ void Vision::run() {
     double fps = (double) frames / ((double) wall * 1e-9);
 
     cout << fps << " fps" << endl;
+
+    //cap.close();
+    //out.close();
+
 
 }
 

@@ -13,8 +13,9 @@ find_package( Threads REQUIRED)
 find_package( Boost 1.55 COMPONENTS system timer program_options thread REQUIRED )
 find_package( OpenCV 1.4.8 REQUIRED )
 find_package( Thrift REQUIRED )
-find_package( GLIB COMPONENTS gobject gthread REQUIRED )
-find_package( GStreamer REQUIRED )
+find_package( GLIB COMPONENTS gobject gthread gmodule REQUIRED )
+find_package( LibXml2 REQUIRED )
+find_package( GStreamer COMPONENTS app base video REQUIRED )
 
 include_directories(
   SYSTEM
@@ -22,7 +23,10 @@ include_directories(
   ${OpenCV_INCLUDE_DIR}
   ${THRIFT_INCLUDE_DIR}
   ${GLIB_INCLUDE_DIRS}
+  ${LIBXML2_INCLUDE_DIR}
   ${GSTREAMER_INCLUDE_DIRS}
+  ${GSTREAMER_APP_INCLUDE_DIRS}
+  ${GSTREAMER_VIDEO_INCLUDE_DIRS}
   ${GSTREAMER_BASE_INCLUDE_DIRS}
   )
 
@@ -51,11 +55,15 @@ target_link_libraries( spoor
     ${OpenCV_LIBRARIES}
     ${THRIFT_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
-    ${GLIB_LIBRARIES}
-    ${GLIB_GOBJECT_LIBRARIES}
-    ${GLIB_GTHREAD_LIBRARIES}
-    ${GSTREAMER_LIBRARIES}
+    ${GSTREAMER_VIDEO_LIBRARIES}
+    ${GSTREAMER_APP_LIBRARIES}
     ${GSTREAMER_BASE_LIBRARIES}
+    ${GSTREAMER_LIBRARIES}
+    ${GLIB_GOBJECT_LIBRARIES}
+    ${GLIB_GMODULE_LIBRARIES}
+    ${GLIB_GTHREAD_LIBRARIES}
+    ${GLIB_LIBRARIES}
+    ${LIBXML2_LIBRARIES}
     )
 
 

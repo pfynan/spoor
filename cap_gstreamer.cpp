@@ -151,11 +151,8 @@ bool CvCapture_GStreamer::grabFrame()
         gst_buffer_unref(buffer);
     handleMessage();
 
-    sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
-    if(!sample)
-        return false;
+    buffer = gst_app_sink_pull_buffer(GST_APP_SINK(sink));
 
-    buffer = gst_sample_get_buffer(sample);
 
     return true;
 }
@@ -170,7 +167,7 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
 
     if(!frame) {
         gint height, width;
-        GstCaps *buff_caps = gst_sample_get_caps(sample);
+        GstCaps *buff_caps = gst_buffer_get_caps(buffer);
         assert(gst_caps_get_size(buff_caps) == 1);
         GstStructure* structure = gst_caps_get_structure(buff_caps, 0);
 
@@ -456,6 +453,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     enc=gst_element_factory_make(encit->second, NULL);
     mux=gst_element_factory_make("avimux", NULL);
     color = gst_element_factory_make("ffmpegcolorspace", NULL);
+    vrate = gst_element_factory_make("videorate", NULL);
     if (!enc)
         CV_ERROR( CV_StsUnsupportedFormat, "Your version of Gstreamer doesn't support this codec acutally or needed plugin missing.");
     g_object_set(G_OBJECT(file), "location", filename, NULL);
@@ -483,13 +481,13 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     }
     gst_app_src_set_caps(GST_APP_SRC(source), caps);
     if (fourcc==CV_FOURCC_DEFAULT) {
-        gst_bin_add_many(GST_BIN(pipeline), source, color,mux, file, NULL);
+        gst_bin_add_many(GST_BIN(pipeline), source, color,vrate,mux, file, NULL);
         if(!gst_element_link_many(source,color,enc,mux,file,NULL)) {
             CV_ERROR(CV_StsError, "GStreamer: cannot link elements\n");
         }
     }
     else {
-        gst_bin_add_many(GST_BIN(pipeline), source, color,enc,mux, file, NULL);
+        gst_bin_add_many(GST_BIN(pipeline), source, color,vrate,enc,mux, file, NULL);
         if(!gst_element_link_many(source,color,enc,mux,file,NULL)) {
             CV_ERROR(CV_StsError, "GStreamer: cannot link elements\n");
         }

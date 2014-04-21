@@ -78,8 +78,105 @@ private:
     {
         if(!gst_is_initialized())
             gst_init(NULL, NULL);
+        gst_debug_set_default_threshold(GST_LEVEL_WARNING);
     }
 };
+
+/* Functions below print the Capabilities in a human-friendly format */
+static gboolean print_field (GQuark field, const GValue * value, gpointer pfx) {
+  gchar *str = gst_value_serialize (value);
+   
+  g_print ("%s  %15s: %s\n", (gchar *) pfx, g_quark_to_string (field), str);
+  g_free (str);
+  return TRUE;
+}
+   
+static void print_caps (const GstCaps * caps, const gchar * pfx) {
+  guint i;
+   
+  g_return_if_fail (caps != NULL);
+   
+  if (gst_caps_is_any (caps)) {
+    g_print ("%sANY\n", pfx);
+    return;
+  }
+  if (gst_caps_is_empty (caps)) {
+    g_print ("%sEMPTY\n", pfx);
+    return;
+  }
+   
+  for (i = 0; i < gst_caps_get_size (caps); i++) {
+    GstStructure *structure = gst_caps_get_structure (caps, i);
+     
+    g_print ("%s%s\n", pfx, gst_structure_get_name (structure));
+    gst_structure_foreach (structure, print_field, (gpointer) pfx);
+  }
+}
+   
+/* Prints information about a Pad Template, including its Capabilities */
+static void print_pad_templates_information (GstElementFactory * factory) {
+  const GList *pads;
+  GstStaticPadTemplate *padtemplate;
+   
+  g_print ("Pad Templates for %s:\n", gst_element_factory_get_longname (factory));
+  if (!factory->numpadtemplates) {
+    g_print ("  none\n");
+    return;
+  }
+   
+  pads = factory->staticpadtemplates;
+  while (pads) {
+    padtemplate = (GstStaticPadTemplate *) (pads->data);
+    pads = g_list_next (pads);
+     
+    if (padtemplate->direction == GST_PAD_SRC)
+      g_print ("  SRC template: '%s'\n", padtemplate->name_template);
+    else if (padtemplate->direction == GST_PAD_SINK)
+      g_print ("  SINK template: '%s'\n", padtemplate->name_template);
+    else
+      g_print ("  UNKNOWN!!! template: '%s'\n", padtemplate->name_template);
+     
+    if (padtemplate->presence == GST_PAD_ALWAYS)
+      g_print ("    Availability: Always\n");
+    else if (padtemplate->presence == GST_PAD_SOMETIMES)
+      g_print ("    Availability: Sometimes\n");
+    else if (padtemplate->presence == GST_PAD_REQUEST) {
+      g_print ("    Availability: On request\n");
+    } else
+      g_print ("    Availability: UNKNOWN!!!\n");
+     
+    if (padtemplate->static_caps.string) {
+      g_print ("    Capabilities:\n");
+      print_caps (gst_static_caps_get (&padtemplate->static_caps), "      ");
+    }
+     
+    g_print ("\n");
+  }
+}
+   
+/* Shows the CURRENT capabilities of the requested pad in the given element */
+static void print_pad_capabilities (GstElement *element, gchar *pad_name) {
+  GstPad *pad = NULL;
+  GstCaps *caps = NULL;
+   
+  /* Retrieve pad */
+  pad = gst_element_get_static_pad (element, pad_name);
+  if (!pad) {
+    g_printerr ("Could not retrieve pad '%s'\n", pad_name);
+    return;
+  }
+   
+  /* Retrieve negotiated caps (or acceptable caps if negotiation is not finished yet) */
+  caps = gst_pad_get_negotiated_caps (pad);
+  if (!caps)
+    caps = gst_pad_get_caps_reffed (pad);
+   
+  /* Print and free */
+  g_print ("Caps for the %s pad:\n", pad_name);
+  print_caps (caps, "      ");
+  gst_caps_unref (caps);
+  gst_object_unref (pad);
+}
 
 void CvCapture_GStreamer::init()
 {
@@ -280,6 +377,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     gst_initializer::init();
 
+
 //    if(!isInited) {
 //        printf("gst_init\n");
 //        gst_init (NULL, NULL);
@@ -424,42 +522,42 @@ void CvVideoWriter_GStreamer::close()
         gst_object_unref (GST_OBJECT (pipeline));
     }
 }
-bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
-        double fps, CvSize frameSize, bool is_color )
+bool CvVideoWriter_GStreamer::open( const char * pipeline_string,
+        double fps, CvSize frameSize)
 {
     CV_FUNCNAME("CvVideoWriter_GStreamer::open");
 
     __BEGIN__;
-    //actually doesn't support fourcc parameter and encode an avi with jpegenc
-    //we need to find a common api between backend to support fourcc for avi
-    //but also to choose in a common way codec and container format (ogg,dirac,matroska)
-    // check arguments
 
     assert (filename);
     assert (fps > 0);
     assert (frameSize.width > 0  &&  frameSize.height > 0);
     std::map<int,char*>::iterator encit;
-    encit=encs.find(fourcc);
-    if (encit==encs.end())
-        CV_ERROR( CV_StsUnsupportedFormat,"Gstreamer Opencv backend doesn't support this codec acutally.");
-//    if(!isInited) {
-//        gst_init (NULL, NULL);
-//        isInited = true;
-//    }
+
     gst_initializer::init();
+
     close();
-    source=gst_element_factory_make("appsrc",NULL);
-    file=gst_element_factory_make("filesink", NULL);
-    enc=gst_element_factory_make(encit->second, NULL);
-    mux=gst_element_factory_make("avimux", NULL);
-    color = gst_element_factory_make("ffmpegcolorspace", NULL);
-    vrate = gst_element_factory_make("videorate", NULL);
-    if (!enc)
-        CV_ERROR( CV_StsUnsupportedFormat, "Your version of Gstreamer doesn't support this codec acutally or needed plugin missing.");
-    g_object_set(G_OBJECT(file), "location", filename, NULL);
-    pipeline = gst_pipeline_new (NULL);
+
+
+    pipeline = gst_parse_launch(pipeline_string, NULL);
+
+    GstIterator *it = gst_bin_iterate_sources(GST_BIN(pipeline));
+
+
+    while(1) {
+        // I feel dirty...
+        if(gst_iterator_next(it, (gpointer *)&source) != GST_ITERATOR_OK) {
+            CV_ERROR(CV_StsError, "GStreamer: cannot find appsrc in manual pipeline\n");
+            return false;
+        }
+
+        if(GST_IS_APP_SRC(source))
+            break;
+    }
+
+
     GstCaps* caps;
-    if (is_color) {
+    //if (is_color) {
         input_pix_fmt=1;
         caps= gst_video_format_new_caps(GST_VIDEO_FORMAT_BGR,
                                         frameSize.width,
@@ -468,6 +566,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
                                         1000,
                                         1,
                                         1);
+/*
     }
     else  {
         input_pix_fmt=0;
@@ -479,25 +578,17 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
                                   "depth",G_TYPE_INT,8,
                                   NULL);
     }
+*/
+
     gst_app_src_set_caps(GST_APP_SRC(source), caps);
-    if (fourcc==CV_FOURCC_DEFAULT) {
-        gst_bin_add_many(GST_BIN(pipeline), source, color,vrate,mux, file, NULL);
-        if(!gst_element_link_many(source,color,enc,mux,file,NULL)) {
-            CV_ERROR(CV_StsError, "GStreamer: cannot link elements\n");
-        }
-    }
-    else {
-        gst_bin_add_many(GST_BIN(pipeline), source, color,vrate,enc,mux, file, NULL);
-        if(!gst_element_link_many(source,color,enc,mux,file,NULL)) {
-            CV_ERROR(CV_StsError, "GStreamer: cannot link elements\n");
-        }
-    }
 
 
     if(gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING) ==
         GST_STATE_CHANGE_FAILURE) {
             CV_ERROR(CV_StsError, "GStreamer: cannot put pipeline to play\n");
     }
+
+
     __END__;
     return true;
 }
@@ -520,12 +611,14 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     else {
         assert(false);
     }
+
     int size;
     size = image->imageSize;
     buffer = gst_buffer_new_and_alloc (size);
     //gst_buffer_set_data (buffer,(guint8*)image->imageData, size);
     memcpy (GST_BUFFER_DATA(buffer),image->imageData, size);
-    gst_app_src_push_buffer(GST_APP_SRC(source),buffer);
+    if(gst_app_src_push_buffer(GST_APP_SRC(source),buffer) != GST_FLOW_OK)
+        CV_ERROR(CV_StsError, "Shit just went down!");
     //gst_buffer_unref(buffer);
     //buffer = 0;
     __END__;

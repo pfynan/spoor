@@ -74,12 +74,24 @@ void Vision::run() {
 
     CvCapture_GStreamer cap;
 
-    if(!cap.open(3,"video/low1.avi"))
+    if(!cap.open(3,
+        "udpsrc port=4000 caps=\"application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)JPEG, payload=(int)96\" ! "
+        "rtpjpegdepay ! jpegdec ! ffmpegcolorspace ! appsink"
+                ))
         cerr << "Failed to open" << endl;
+
+
 
     CvVideoWriter_GStreamer out;
 
-    if(!out.open("out.avi",CV_FOURCC('M','P','2','V'),25,Size(640,480),true))
+    if(!out.open(
+                "appsrc ! "
+                "ffmpegcolorspace ! "
+                "video/x-raw-yuv ! "
+                "jpegenc ! "
+                "rtpjpegpay ! "
+                "udpsink host=127.0.0.1 port=5000"
+                ,25,Size(640,480)))
         cerr << "Failed to open output" << endl;
 
 
@@ -101,8 +113,13 @@ void Vision::run() {
             break;
         
 
+        if(frames >= 150)
+            break;
+
         Mat disp;
         image.copyTo(disp);
+
+        
         optional<Point2f> fp = fe(image);
         Point2f pp = tr(fp);
 
@@ -117,8 +134,9 @@ void Vision::run() {
         }
 
         franken_conn->writeSetTargetAngle(pp);
-
         
+        
+
         //writer << disp;
         IplImage oframe = IplImage(disp);
         out.writeFrame(&oframe);

@@ -53,19 +53,14 @@ public:
     CvVideoWriter_GStreamer() { init(); }
     virtual ~CvVideoWriter_GStreamer() { close(); }
 
-    virtual bool open( const char* filename, int fourcc,
-                       double fps, CvSize frameSize, bool isColor );
+    virtual bool open( const char* filename, 
+                       double fps, CvSize frameSize);
     virtual void close();
     virtual bool writeFrame( const IplImage* image );
 protected:
     void init();
     std::map<int, char*> encs;
     GstElement* source;
-    GstElement* file;
-    GstElement* enc;
-    GstElement* mux;
-    GstElement* color;
-    GstElement* vrate;
     GstBuffer* buffer;
     GstElement* pipeline;
     int input_pix_fmt;

@@ -113,7 +113,7 @@ void Vision::run() {
             break;
         
 
-        if(frames >= 150)
+        if(frames >= 100)
             break;
 
         Mat disp;

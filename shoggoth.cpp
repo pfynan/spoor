@@ -48,7 +48,7 @@ class TrackingHandler : virtual public TrackingIf {
 
         void setOnOff(const bool state) {
             printf("setOnOff\n");
-            franken_conn->writeLightOnOff(state);
+            franken_conn->writeOnOff(state);
 
         }
 

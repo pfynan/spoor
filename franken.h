@@ -32,9 +32,43 @@ class FrankenConnection
 {
 public:
     FrankenConnection ();
-    void writeSetTargetAngle(cv::Point2f pp);
-    void writeLightIntensity(ushort intens);
-    void writeLightOnOff(bool onoff);
+    void writeGoto(cv::Point2f pp);
+    void writeIntensity(ushort intens);
+    void writeOnOff(bool onoff);
+    void writeHalt();
+    void writeSleep();
+    void writeWake();
+
+    struct Status {
+        enum class LightStatus : char {
+            OVERHEAT = 'H',
+            ON = 'O',
+            OFF = 'F'
+        };
+
+        LightStatus light;
+
+        char intensity;
+
+        enum class MoveStatus : char {
+            RUNNING = 'R',
+            UNCAL = 'U',
+            CALLING = 'C',
+            SLEEPING = 'S',
+            TILT_OVERCUR = 'O',
+            TILT_FAULT = 'F',
+            PAN_OVERCUR = 'o',
+            PAN_FAULT = 'f'
+        };
+
+        MoveStatus move;
+
+        short current_x;
+        short current_y;
+
+    };
+
+    Status getStatus();
 
 private:
     boost::asio::io_service io_service;
@@ -42,9 +76,15 @@ private:
     boost::mutex mtx;
     void sendMessage(std::function<void(std::ostream&)> fn);
     
-enum class MessageType
-    { SET_TARGET_ANGLE = 1
-    , SET_LIGHT_INTENSITY = 2
-    , SET_LIGHT_ONOFF = 3
+enum class MessageType : char
+    { GOTO = 'G'
+    , ONOFF = 'O'
+    , HALT = 'H'
+    , SLEEP = 'S'
+    , WAKE = 'W'
+    , FILE_NOT_FOUND = 'T' // I'm going to hell for this...
+    , INTENSITY = 'I'
+    , STATUS = '?'
+    , CALIBRATE = '?'
     };
 };

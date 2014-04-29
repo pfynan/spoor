@@ -42,11 +42,11 @@ void FrankenConnection::sendMessage(std::function<void(std::ostream&)> fn) {
 
 }
 
-void FrankenConnection::writeSetTargetAngle(Point2f pp) {
+void FrankenConnection::writeGoto(Point2f pp) {
 
     sendMessage([=] (ostream &buf) {
             // Message type
-            buf.put(static_cast<char>(MessageType::SET_TARGET_ANGLE));
+            buf.put(static_cast<char>(MessageType::GOTO));
 
             // X and Y coordinates
             short x = htons((int)pp.x);
@@ -63,11 +63,11 @@ void FrankenConnection::writeSetTargetAngle(Point2f pp) {
 
 }
 
-void FrankenConnection::writeLightIntensity(ushort intens) {
+void FrankenConnection::writeIntensity(ushort intens) {
     
     sendMessage([=] (ostream &buf) {
         // Message type
-        buf.put(static_cast<char>(MessageType::SET_LIGHT_INTENSITY));
+        buf.put(static_cast<char>(MessageType::INTENSITY));
 
         ushort nbointens = htons(intens);
         buf.write((char*)&nbointens,sizeof(short));
@@ -79,11 +79,11 @@ void FrankenConnection::writeLightIntensity(ushort intens) {
 
 }
 
-void FrankenConnection::writeLightOnOff(bool onoff) {
+void FrankenConnection::writeOnOff(bool onoff) {
     
     sendMessage([=] (ostream &buf) {
         // Message type
-        buf.put(static_cast<char>(MessageType::SET_LIGHT_ONOFF));
+        buf.put(static_cast<char>(MessageType::ONOFF));
 
         buf.put(onoff);
 
@@ -94,4 +94,94 @@ void FrankenConnection::writeLightOnOff(bool onoff) {
     });
 
 }
+
+
+void FrankenConnection::writeHalt() {
+    
+    sendMessage([=] (ostream &buf) {
+        // Message type
+        buf.put(static_cast<char>(MessageType::HALT));
+
+        for (int i = 0; i < 7; ++i)
+        {
+            buf.put(0);
+        }
+    });
+
+}
+
+void FrankenConnection::writeSleep() {
+    
+    sendMessage([=] (ostream &buf) {
+        // Message type
+        buf.put(static_cast<char>(MessageType::SLEEP));
+
+        for (int i = 0; i < 7; ++i)
+        {
+            buf.put(0);
+        }
+    });
+
+}
+
+
+void FrankenConnection::writeWake() {
+    
+    sendMessage([=] (ostream &buf) {
+        // Message type
+        buf.put(static_cast<char>(MessageType::WAKE));
+
+        for (int i = 0; i < 7; ++i)
+        {
+            buf.put(0);
+        }
+    });
+
+}
+
+FrankenConnection::Status FrankenConnection::getStatus() {
+
+    sendMessage([=] (ostream &buf) {
+        // Message type
+        buf.put(static_cast<char>(MessageType::STATUS));
+
+        for (int i = 0; i < 7; ++i)
+        {
+            buf.put(0);
+        }
+    });
+    
+
+   char length;
+
+   asio::read(s,asio::buffer(&length, sizeof(length)));
+
+    asio::streambuf buf;
+
+    size_t n = asio::read(s,buf.prepare(length));
+
+    if(n != length)
+        cerr << "Someone goofed..." << endl;
+
+    buf.commit(n);
+
+    istream is(&buf);
+
+    Status status;
+
+    is.read((char*)&status.light, sizeof(status.light));
+    is.read((char*)&status.intensity, sizeof(status.intensity));
+    is.read((char*)&status.move, sizeof(status.move));
+
+    is.read((char*)&status.current_x, sizeof(status.current_x));
+    is.read((char*)&status.current_y, sizeof(status.current_y));
+
+    status.current_x = ntohs(status.current_x);
+    status.current_y = ntohs(status.current_y);
+
+    return status;
+
+
+}
+
 

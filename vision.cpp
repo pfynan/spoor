@@ -95,7 +95,7 @@ void Vision::run() {
             cur_pos = fp;
         }
 
-        franken_conn->writeSetTargetAngle(pp);
+        franken_conn->writeGoto(pp);
 
 
         

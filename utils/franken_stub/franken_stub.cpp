@@ -9,31 +9,44 @@ using namespace boost;
 using namespace std;
 
 typedef tokenizer<char_separator<char>>::iterator tok_it;
-typedef boost::asio::ip::tcp::socket sock;
 
-void parseSetAngle(tok_it cur_tok, sock &s) {
-    using namespace std::placeholders;
+void parseGoto(tok_it cur_tok, FrankenConnection &s) {
     float x = lexical_cast<float>(*cur_tok);
     float y = lexical_cast<float>(*(++cur_tok));
-    sendMessage(bind(writeSetTargetAngle,_1,cv::Point2f(x,y)),s);
+    s.writeGoto(cv::Point2f(x,y));
 }
 
-void parseExit(tok_it cur_tok, sock &s) {
+void parseStatus(tok_it cur_tok, FrankenConnection &s) {
+    FrankenConnection::Status status;
+
+    status = s.getStatus();
+
+    cout << (char)status.light << endl;
+    cout << status.intensity << endl;
+    cout << (char)status.move << endl;
+    cout << status.current_x << endl;
+    cout << status.current_y << endl;
+
+}
+
+
+void parseExit(tok_it cur_tok, FrankenConnection &s) {
     exit(0);
 }
 
 
-void parse(string &command, sock &s) {
+void parse(string &command, FrankenConnection &s) {
     char_separator<char> sep(" ");
     tokenizer<char_separator<char>> tokens(command, sep);
 
     tok_it cur_tok = tokens.begin();
 
-    map<string,function<void(tok_it,sock&)>> lut = 
-    {{"angle", parseSetAngle}
+    map<string,std::function<void(tok_it,FrankenConnection&)> > lut = 
+    {{"goto", parseGoto}
     //,{"intens", parseSetIntens}
     //,{"on", parseOn}
     //,{"off", parseOff}
+    ,{"status", parseStatus}
     ,{"exit", parseExit}
     };
 
@@ -51,31 +64,7 @@ void parse(string &command, sock &s) {
 int main(int argc, char *argv[])
 {
 
-    string host = "127.0.0.1";
-    string port = "9090";
-
-    if(argc == 3) {
-        host = argv[1];
-        port = argv[2];
-    }
-
-    cout << "Connecting to " << host << ":" << port << endl;
-    
-    using boost::asio::ip::tcp;
-    boost::asio::io_service io_service;
-
-    tcp::socket s(io_service);
-    tcp::resolver resolver(io_service);
-
-    tcp::resolver::query query(tcp::v4(), host, port);
-    tcp::resolver::iterator iterator = resolver.resolve(query);
-
-    system::error_code ec;
-    s.connect(*iterator,ec);
-    //boost::asio::connect(s, resolver.resolve({host, port}),ec);
-    if(ec) {
-        cerr << "Could not connect to light" << endl;
-    }
+    FrankenConnection conn;
 
     while(true) {
 
@@ -87,7 +76,7 @@ int main(int argc, char *argv[])
             break;
 
 
-        parse(command,s);
+        parse(command,conn);
         
 
     }

@@ -22,40 +22,76 @@ class TrackingHandler : virtual public TrackingIf {
             franken_conn = _franken_conn;
             vision = _vision;
         }
+        
+  void setMode(const PointMode::type mode) {
+    // Your implementation goes here
+    printf("setMode\n");
+  }
 
-        void setMode(const PointMode::type mode) {
-            // Your implementation goes here
-            printf("setMode\n");
-        }
+  PointMode::type getMode() {
+    // Your implementation goes here
+    printf("getMode\n");
+  }
 
-        PointMode::type getMode() {
-            // Your implementation goes here
-            printf("getMode\n");
-        }
+  void setPos(const Coordinates& coord) {
+    // Your implementation goes here
+    printf("setPos\n");
+  }
 
-        void setPos(const int16_t target) {
-            // Your implementation goes here
-            printf("setPos\n");
-        }
+  void setOnOff(const bool state) {
+    // Your implementation goes here
+    printf("setOnOff\n");
+  }
 
-        void getActualPos(Coordinates& _return) {
-            // Your implementation goes here
-            printf("getActualPos\n");
-            boost::optional<cv::Point2f>  p = vision->getCurPos();
-            _return.phi = p ? p->x : 0;
-            _return.theta = p ? p->y : 0;
-        }
+  void halt() {
+    // Your implementation goes here
+    printf("halt\n");
+  }
 
-        void setOnOff(const bool state) {
-            printf("setOnOff\n");
-            franken_conn->writeOnOff(state);
+  void sleep() {
+    // Your implementation goes here
+    printf("sleep\n");
+  }
 
-        }
+  void wake() {
+    // Your implementation goes here
+    printf("wake\n");
+  }
+
+  void setIntensity(const int8_t intens) {
+    // Your implementation goes here
+    printf("setIntensity\n");
+  }
+
+  void calibrate() {
+    // Your implementation goes here
+    printf("calibrate\n");
+  }
+
+  LightStatus::type getLightStatus() {
+    // Your implementation goes here
+    printf("getLightStatus\n");
+  }
+
+  int8_t getIntensity() {
+    // Your implementation goes here
+    printf("getIntensity\n");
+  }
+
+  MoveStatus::type getMoveStatus() {
+    // Your implementation goes here
+    printf("getMoveStatus\n");
+  }
+
+  void getActualPos(Coordinates& _return) {
+    // Your implementation goes here
+    printf("getActualPos\n");
+  }
 
 };
 
 void thriftThread(boost::shared_ptr<FrankenConnection> franken_conn,boost::shared_ptr<Vision> vision) {
-  int port = 9091;
+  int port = 9090;
   shared_ptr<TrackingHandler> handler(new TrackingHandler(franken_conn,vision));
   shared_ptr<TProcessor> processor(new TrackingProcessor(handler));
   shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));

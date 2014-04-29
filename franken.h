@@ -82,9 +82,8 @@ enum class MessageType : char
     , HALT = 'H'
     , SLEEP = 'S'
     , WAKE = 'W'
-    , FILE_NOT_FOUND = 'T' // I'm going to hell for this...
     , INTENSITY = 'I'
-    , STATUS = '?'
-    , CALIBRATE = '?'
+    , STATUS = 'T'
+    , CALIBRATE = 'C'
     };
 };

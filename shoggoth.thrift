@@ -17,7 +17,7 @@ enum LightStatus {
 enum MoveStatus {
     RUNNING,
     UNCAL,
-    CALLING,
+    CALING,
     SLEEPING,
     TILT_OVERCUR,
     TILT_FAULT,

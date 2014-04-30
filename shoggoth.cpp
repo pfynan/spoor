@@ -36,56 +36,108 @@ class TrackingHandler : virtual public TrackingIf {
   void setPos(const Coordinates& coord) {
     // Your implementation goes here
     printf("setPos\n");
+    cv::Point2f pp;
+    pp.x = coord.x;
+    pp.y = coord.y;
+    franken_conn->writeGoto(pp);
   }
 
   void setOnOff(const bool state) {
     // Your implementation goes here
     printf("setOnOff\n");
+    franken_conn->writeOnOff(state);
   }
 
   void halt() {
     // Your implementation goes here
     printf("halt\n");
+
+    franken_conn->writeHalt();
   }
 
   void sleep() {
     // Your implementation goes here
     printf("sleep\n");
+    franken_conn->writeSleep();
   }
 
   void wake() {
     // Your implementation goes here
     printf("wake\n");
+    franken_conn->writeWake();
   }
 
   void setIntensity(const int8_t intens) {
     // Your implementation goes here
     printf("setIntensity\n");
+    franken_conn->writeIntensity(intens);
   }
 
   void calibrate() {
     // Your implementation goes here
     printf("calibrate\n");
+    printf("not implemented\n");
   }
 
   LightStatus::type getLightStatus() {
     // Your implementation goes here
     printf("getLightStatus\n");
+    FrankenConnection::Status status = franken_conn->getStatus();
+
+    typedef FrankenConnection::Status::LightStatus type;
+
+    switch(status.light) {
+        case type::OVERHEAT:
+            return LightStatus::OVERHEAT;
+        case type::ON:
+            return LightStatus::ON;
+        case type::OFF:
+            return LightStatus::OFF;
+    }
+
+    
   }
 
   int8_t getIntensity() {
     // Your implementation goes here
     printf("getIntensity\n");
+    FrankenConnection::Status status = franken_conn->getStatus();
+    return status.intensity;
   }
 
   MoveStatus::type getMoveStatus() {
     // Your implementation goes here
     printf("getMoveStatus\n");
+    FrankenConnection::Status status = franken_conn->getStatus();
+
+    typedef FrankenConnection::Status::MoveStatus type;
+    switch(status.move) {
+        case type::RUNNING:
+            return MoveStatus::RUNNING;
+        case type::UNCAL:
+            return MoveStatus::UNCAL;
+        case type::CALING:
+            return MoveStatus::CALING;
+        case type::SLEEPING:
+            return MoveStatus::SLEEPING;
+        case type::TILT_OVERCUR:
+            return MoveStatus::TILT_OVERCUR;
+        case type::TILT_FAULT:
+            return MoveStatus::TILT_FAULT;
+        case type::PAN_OVERCUR:
+            return MoveStatus::PAN_OVERCUR;
+        case type::PAN_FAULT:
+            return MoveStatus::PAN_FAULT;
+    }
   }
 
   void getActualPos(Coordinates& _return) {
     // Your implementation goes here
     printf("getActualPos\n");
+    FrankenConnection::Status status = franken_conn->getStatus();
+    _return.x = status.current_x;
+    _return.y = status.current_y;
+    
   }
 
 };

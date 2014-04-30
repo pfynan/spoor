@@ -53,7 +53,7 @@ public:
         enum class MoveStatus : char {
             RUNNING = 'R',
             UNCAL = 'U',
-            CALLING = 'C',
+            CALING = 'C',
             SLEEPING = 'S',
             TILT_OVERCUR = 'O',
             TILT_FAULT = 'F',

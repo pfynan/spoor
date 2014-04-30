@@ -17,6 +17,17 @@ public:
         return cur_pos;
     }
 
+    void setEngaged(bool _e) {
+        boost::lock_guard<boost::mutex> lock(mtx);
+        engaged = _e;
+    }
+
+    bool getEngaged() {
+        boost::lock_guard<boost::mutex> lock(mtx);
+        return engaged;
+    }
+
+
 private:
     boost::mutex mtx;
     boost::optional<cv::Point2f> cur_pos;
@@ -25,4 +36,6 @@ private:
     boost::shared_ptr<ImLogger> log;
     cv::VideoWriter writer;
     cv::Size frame_size;
+
+    bool engaged;
 };

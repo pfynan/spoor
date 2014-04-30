@@ -20,7 +20,7 @@ using namespace boost;
 
 namespace po = boost::program_options;
 
-Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) {
+Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) : engaged(false) {
     franken_conn = _franken_conn;
     string outfile = "out.avi";
 
@@ -93,9 +93,11 @@ void Vision::run() {
         {
             lock_guard<mutex> lck(mtx);
             cur_pos = fp;
+            if(engaged)
+                franken_conn->writeGoto(pp);
+            // NOTE: I smell a deadlock...
         }
 
-        franken_conn->writeGoto(pp);
 
 
         

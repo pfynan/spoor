@@ -26,11 +26,25 @@ class TrackingHandler : virtual public TrackingIf {
   void setMode(const PointMode::type mode) {
     // Your implementation goes here
     printf("setMode\n");
+    switch(mode) {
+        case PointMode::AUTOMATIC:
+            franken_conn->setEngaged(true);
+            break;
+        case PointMode::MANUAL:
+            franken_conn->setEngaged(false);
+            break;
+    }
   }
 
   PointMode::type getMode() {
     // Your implementation goes here
     printf("getMode\n");
+    switch(franken_conn->getEngaged) {
+        case true:
+            return PointMode::AUTOMATIC;
+        case false:
+            return PointMode::MANUAL;
+    }
   }
 
   void setPos(const Coordinates& coord) {

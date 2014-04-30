@@ -14,6 +14,8 @@
 #include "tracking.h"
 #include "franken.h"
 
+#include "cap_gstreamer.h"
+
 using namespace std;
 using namespace cv;
 using namespace boost;
@@ -25,7 +27,7 @@ Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<Fran
     string outfile = "out.avi";
 
 
-    capture.open(vm["in"].as<string>());
+/*    capture.open(vm["in"].as<string>());
 
     if(!capture.isOpened()) {
         cerr << "Can't open input" << endl;
@@ -36,6 +38,7 @@ Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<Fran
     frame_size = Size( capture.get(CV_CAP_PROP_FRAME_WIDTH)
                      , capture.get(CV_CAP_PROP_FRAME_HEIGHT));
     
+
     map<string,string> logmap;
 
     vector<string> hooks;
@@ -62,14 +65,37 @@ Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<Fran
           , CV_FOURCC('F','M','P','4')
           , capture.get(CV_CAP_PROP_FPS)
           , frame_size);
+    */
+    log = boost::shared_ptr<ImLogger>(new ImLogger(std::map<string,string>(),25,Size(0,0)));
 
 }
 
 void Vision::run() {
-    Mat image;
-    namedWindow("Out",1);
 
-    FeatureExtract fe(frame_size,log);
+    CvCapture_GStreamer cap;
+
+    if(!cap.open(3,
+        "udpsrc port=4000 caps=\"application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)JPEG, payload=(int)96\" ! "
+        "rtpjpegdepay ! jpegdec ! ffmpegcolorspace ! appsink"
+                ))
+        cerr << "Failed to open" << endl;
+
+
+
+    CvVideoWriter_GStreamer out;
+
+    if(!out.open(
+                "appsrc ! "
+                "ffmpegcolorspace ! "
+                "video/x-raw-yuv ! "
+                "jpegenc ! "
+                "rtpjpegpay ! "
+                "udpsink host=127.0.0.1 port=5000"
+                ,25,Size(640,480)))
+        cerr << "Failed to open output" << endl;
+
+
+    FeatureExtract fe(Size(640,480),log);
     Tracking tr;
 
 
@@ -77,11 +103,23 @@ void Vision::run() {
     int frames = 0;
 
     timer::cpu_timer timer;
-    while(capture >> image, !image.empty()) {
+    Mat image;
+    while(1) {
+        if(!cap.grabFrame())
+            break;
+
+        image = Mat(cap.retrieveFrame(0));
+        if(image.empty())
+            break;
         
+
+        if(frames >= 100)
+            break;
 
         Mat disp;
         image.copyTo(disp);
+
+        
         optional<Point2f> fp = fe(image);
         Point2f pp = tr(fp);
 
@@ -99,12 +137,13 @@ void Vision::run() {
         }
 
 
-
-        
-        writer << disp;
+        //writer << disp;
+        IplImage oframe = IplImage(disp);
+        out.writeFrame(&oframe);
         frames++;
 
     }
+
 
     timer::cpu_times const elapsed(timer.elapsed());
     timer::nanosecond_type const wall(elapsed.wall);
@@ -112,6 +151,10 @@ void Vision::run() {
     double fps = (double) frames / ((double) wall * 1e-9);
 
     cout << fps << " fps" << endl;
+
+    //cap.close();
+    //out.close();
+
 
 }
 

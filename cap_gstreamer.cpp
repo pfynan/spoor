@@ -529,7 +529,7 @@ bool CvVideoWriter_GStreamer::open( const char * pipeline_string,
 
     __BEGIN__;
 
-    assert (filename);
+    assert (pipeline_string);
     assert (fps > 0);
     assert (frameSize.width > 0  &&  frameSize.height > 0);
     std::map<int,char*>::iterator encit;

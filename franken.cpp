@@ -139,6 +139,20 @@ void FrankenConnection::writeWake() {
 
 }
 
+void FrankenConnection::writeCal() {
+    
+    sendMessage([=] (ostream &buf) {
+        // Message type
+        buf.put(static_cast<char>(MessageType::CALIBRATE));
+
+        for (int i = 0; i < 7; ++i)
+        {
+            buf.put(0);
+        }
+    });
+
+}
+
 FrankenConnection::Status FrankenConnection::getStatus() {
 
     sendMessage([=] (ostream &buf) {

@@ -28,10 +28,10 @@ class TrackingHandler : virtual public TrackingIf {
     printf("setMode\n");
     switch(mode) {
         case PointMode::AUTOMATIC:
-            franken_conn->setEngaged(true);
+            vision->setEngaged(true);
             break;
         case PointMode::MANUAL:
-            franken_conn->setEngaged(false);
+            vision->setEngaged(false);
             break;
     }
   }
@@ -39,7 +39,7 @@ class TrackingHandler : virtual public TrackingIf {
   PointMode::type getMode() {
     // Your implementation goes here
     printf("getMode\n");
-    switch(franken_conn->getEngaged) {
+    switch(vision->getEngaged()) {
         case true:
             return PointMode::AUTOMATIC;
         case false:
@@ -90,7 +90,7 @@ class TrackingHandler : virtual public TrackingIf {
   void calibrate() {
     // Your implementation goes here
     printf("calibrate\n");
-    printf("not implemented\n");
+    franken_conn->writeCal();
   }
 
   LightStatus::type getLightStatus() {

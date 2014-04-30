@@ -38,6 +38,7 @@ public:
     void writeHalt();
     void writeSleep();
     void writeWake();
+    void writeCal();
 
     struct Status {
         enum class LightStatus : char {

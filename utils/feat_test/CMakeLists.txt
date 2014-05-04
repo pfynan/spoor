@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 2.8 )
-project( mog_test )
+project( feat_test )
 
 # Compile flag database
 set( CMAKE_EXPORT_COMPILE_COMMANDS 1 )
@@ -17,14 +17,14 @@ include_directories(
   )
 
 
-file( GLOB PROJECT_SOURCES mog_test.cpp )
+file( GLOB PROJECT_SOURCES feat_test.cpp )
 
 
-add_executable( mog_test
+add_executable( feat_test
     ${PROJECT_SOURCES}
     )
 
-target_link_libraries( mog_test
+target_link_libraries( feat_test
     ${Boost_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}

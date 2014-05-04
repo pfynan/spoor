@@ -64,7 +64,24 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    vector<float> sizes;
+
+    KalmanFilter KF(4,2,0);
+
+    KF.transitionMatrix = *(Mat_<float>(4, 4) << 
+            1, 0, 1, 0,
+            0, 1, 0, 1,
+            0, 0, 1, 0,
+            0, 0, 0, 1);
+
+    setIdentity(KF.measurementMatrix);
+    setIdentity(KF.processNoiseCov, Scalar::all(1e-2));
+    setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
+    setIdentity(KF.errorCovPost, Scalar::all(1e+4));
+
+    randn(KF.statePost, Scalar::all(0), Scalar::all(100));
+
+
+    vector<float> logs;
     
     int frames = 0;
 
@@ -92,24 +109,38 @@ int main(int argc, char *argv[])
 
         im.copyTo(i2);
 
+        Mat prediction = KF.predict();
+        Point2f expected = Point2f(prediction(Range(0,2),Range(0,1)));;
 
         auto blobs = getBlobs(i2);
 
 
-        vector<pair<Point2f,float>> distance;
-        transform(begin(blobs),end(blobs),back_inserter(distance),[&](pair<Point2f,float> x) { return make_pair(x.first,abs(x.second - 80)); } );
+        vector<pair<Point2f,float>> masses,distances;
+        transform(begin(blobs),end(blobs),back_inserter(masses),[&](pair<Point2f,float> x) { return make_pair(x.first,abs(x.second - 80)); } );
 
-        auto nearest = min_element(begin(distance),end(distance),[=](pair<Point2f,float> x,pair<Point2f,float> y) { return x.second < y.second; });
+        //transform(begin(blobs),end(blobs),back_inserter(distances),[&](pair<Point2f,float> x) { return make_pair(x.first,norm(x.first - expected)); } );
 
-        transform(begin(blobs),end(blobs),back_inserter(sizes),[] (pair<Point2f,float> x) {return x.second;} );
+        vector<pair<Point2f,float>> scores;
+
+        //transform(begin(masses),end(masses),begin(distances),back_inserter(scores),[&](pair<Point2f,float> x,pair<Point2f,float> y) { return make_pair(x.first,norm(Point2f(x.second,y.second))); } );
+
+        auto nearest = min_element(begin(masses),end(masses),[=](pair<Point2f,float> x,pair<Point2f,float> y) { return x.second < y.second; });
+
+        //transform(begin(blobs),end(blobs),back_inserter(sizes),[] (pair<Point2f,float> x) {return x.second;} );
         
 
-        if(nearest != end(distance) && nearest->second < sqrt(230) * 2) {
-            //sizes.push_back(nearest->second);
+        if(nearest != end(scores) && nearest->second < sqrt(230) * 2) {
             cross(image,nearest->first);
             cross(im,nearest->first);
+            KF.correct(Mat(nearest->first));
         }
 
+        if(nearest != end(scores))
+            logs.push_back(nearest->second);
+
+
+        imshow("out",im);
+        waitKey(25);
 
         //image.convertTo(image,CV_32FC1);
 
@@ -131,10 +162,21 @@ int main(int argc, char *argv[])
 
     EM em(2);
 
-    Mat tr;
 
-    transpose(sizes,tr);
-    em.train(tr);
+    ofstream os("log.txt");
+
+    for (int i = 0; i < logs.size(); ++i)
+    {
+        os << logs[i] << endl;
+    }
+
+    os.close();
+
+
+    Mat tr(logs);
+
+
+    em.train(tr.t());
 
     Mat m = em.get<Mat>("means");
     Mat w = em.get<Mat>("weights");

@@ -5,6 +5,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
+#include <boost/timer/timer.hpp>
 
 
 #ifdef NO_OPENCV
@@ -73,9 +74,13 @@ public:
 
 private:
     boost::asio::io_service io_service;
-    boost::asio::ip::tcp::socket s;
     boost::mutex mtx;
+    boost::asio::ip::tcp::resolver resolver;
+    boost::asio::ip::tcp::resolver::iterator resolved;
     void sendMessage(std::function<void(std::ostream&)> fn);
+
+    boost::timer::nanosecond_type last_message;
+    boost::timer::cpu_timer message_timer;
     
 enum class MessageType : char
     { GOTO = 'G'

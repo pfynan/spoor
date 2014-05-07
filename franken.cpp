@@ -8,27 +8,30 @@ using namespace std;
 using namespace cv;
 using namespace boost;
 
-FrankenConnection::FrankenConnection() : io_service(), s(io_service) {
+using asio::ip::tcp;
+
+timer::nanosecond_type const rate_limit = 250L * 1000000L;
+
+FrankenConnection::FrankenConnection() : io_service(), resolver(io_service) {
     lock_guard<mutex> lock( mtx ); // Deadlock in constructor?
 
-    using boost::asio::ip::tcp;
+    last_message = 0;
 
-    tcp::resolver resolver(io_service);
+    resolved =  resolver.resolve({"127.0.0.1", "8080"});
 
-    system::error_code ec;
-    boost::asio::connect(s, resolver.resolve({"127.0.0.1", "9090"}),ec);
-    if(ec) {
-        cerr << "Could not connect to light" << endl;
-    }
 }
 
 
 void FrankenConnection::sendMessage(std::function<void(std::ostream&)> fn) {
 
     lock_guard<mutex> lock( mtx );
+
+
     asio::streambuf buf;
     ostream stream(&buf);
 
+    tcp::socket s(io_service);
+    asio::connect(s,resolved);
 
     fn(stream);
 
@@ -40,9 +43,17 @@ void FrankenConnection::sendMessage(std::function<void(std::ostream&)> fn) {
 
     boost::asio::write(s,buffers);
 
+    s.close();
+
+
 }
 
 void FrankenConnection::writeGoto(Point2f pp) {
+
+    if(message_timer.elapsed().wall - last_message < rate_limit)
+        return;
+
+    last_message = message_timer.elapsed().wall;
 
     sendMessage([=] (ostream &buf) {
             // Message type
@@ -65,6 +76,11 @@ void FrankenConnection::writeGoto(Point2f pp) {
 
 void FrankenConnection::writeIntensity(ushort intens) {
     
+    if(message_timer.elapsed().wall - last_message >= rate_limit)
+        return;
+
+    last_message = message_timer.elapsed().wall;
+
     sendMessage([=] (ostream &buf) {
         // Message type
         buf.put(static_cast<char>(MessageType::INTENSITY));
@@ -155,31 +171,48 @@ void FrankenConnection::writeCal() {
 
 FrankenConnection::Status FrankenConnection::getStatus() {
 
-    sendMessage([=] (ostream &buf) {
+    auto fn = ([=] (ostream &buf) {
         // Message type
         buf.put(static_cast<char>(MessageType::STATUS));
 
         for (int i = 0; i < 7; ++i)
         {
-            buf.put(0);
+        buf.put(0);
         }
-    });
-    
+        });
 
-   char length;
-
-   asio::read(s,asio::buffer(&length, sizeof(length)));
-
+    lock_guard<mutex> lock( mtx );
     asio::streambuf buf;
+    ostream stream(&buf);
 
-    size_t n = asio::read(s,buf.prepare(length));
+    tcp::socket s(io_service);
+    asio::connect(s,resolved);
+
+    fn(stream);
+
+    const char header = buf.size();
+
+    std::vector<boost::asio::const_buffer> buffers;
+    buffers.push_back( boost::asio::buffer(&header, sizeof(header)) );
+    buffers.push_back( buf.data() );
+
+    boost::asio::write(s,buffers);
+
+
+    char length;
+
+    asio::read(s,asio::buffer(&length, sizeof(length)));
+
+    asio::streambuf buf2;
+
+    size_t n = asio::read(s,buf2.prepare(length));
 
     if(n != length)
         cerr << "Someone goofed..." << endl;
 
-    buf.commit(n);
+    buf2.commit(n);
 
-    istream is(&buf);
+    istream is(&buf2);
 
     Status status;
 
@@ -192,6 +225,8 @@ FrankenConnection::Status FrankenConnection::getStatus() {
 
     status.current_x = ntohs(status.current_x);
     status.current_y = ntohs(status.current_y);
+
+    s.close();
 
     return status;
 

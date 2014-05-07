@@ -43,7 +43,7 @@ inline void cross(cv::Mat& img,cv::Point pt,int size=10) {
     using namespace cv;
 
 
-    Scalar color = Scalar(0,0,255);
+    Scalar color = Scalar(128,0,128);
     int thick = 3;
     line(img,pt - Point(size/2,size/2),pt + Point(size/2,size/2),color,thick);
     line(img,pt - Point(-size/2,size/2),pt + Point(-size/2,size/2),color,thick);
@@ -74,14 +74,23 @@ int main(int argc, char *argv[])
             0, 0, 0, 1);
 
     setIdentity(KF.measurementMatrix);
-    setIdentity(KF.processNoiseCov, Scalar::all(1e-2));
+    setIdentity(KF.processNoiseCov, Scalar::all(100));
     setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
-    setIdentity(KF.errorCovPost, Scalar::all(1e+4));
+    //setIdentity(KF.errorCovPost, Scalar::all(1e+4));
+
+    KF.errorCovPost = *(Mat_<float>(4,4) <<
+62231212, 0, 758041.62, 0,
+  0, 62231212, 0, 758041.62,
+  758041.62, 0, 12363.456, 0,
+  0, 758041.62, 0, 12363.456);
+
 
     randn(KF.statePost, Scalar::all(0), Scalar::all(100));
 
+    Mat iobs_cov = KF.measurementMatrix * KF.errorCovPost * KF.measurementMatrix.t() + KF.measurementNoiseCov;
+    invert(iobs_cov,iobs_cov,DECOMP_SVD);
 
-    vector<float> logs;
+    vector<float> masslog,distlog;
     
     int frames = 0;
 
@@ -101,9 +110,12 @@ int main(int argc, char *argv[])
 
         image.copyTo(im);
 
-        GaussianBlur(im,im,Size(7,7),0);
+        GaussianBlur(im,im,Size(9,9),0);
 
-        threshold(im,im,220,255,THRESH_BINARY);
+        dilate(im,im,getStructuringElement(MORPH_ELLIPSE,Size(7,7)));
+        //morphologyEx(im,im,MORPH_CLOSE,getStructuringElement(MORPH_ELLIPSE,Size(21,21)));
+
+        threshold(im,im,200,255,THRESH_BINARY);
 
         Mat i2;
 
@@ -114,39 +126,37 @@ int main(int argc, char *argv[])
 
         auto blobs = getBlobs(i2);
 
+        vector<pair<Point2f,float>> mags;
 
-        vector<pair<Point2f,float>> masses,distances;
-        transform(begin(blobs),end(blobs),back_inserter(masses),[&](pair<Point2f,float> x) { return make_pair(x.first,abs(x.second - 80)); } );
+        for (int i = 0; i < blobs.size(); ++i)
+        {
+            masslog.push_back(blobs[i].second);
+            float mahal = Mahalanobis(Mat(blobs[i].first),KF.statePost(Range(0,2),Range(0,1)),iobs_cov);
+            distlog.push_back(mahal);
+            if(!(blobs[i].second > 61 && blobs[i].second < 295)) continue;
+            if(mahal > 1) continue;
+            mags.push_back(blobs[i]);
 
-        //transform(begin(blobs),end(blobs),back_inserter(distances),[&](pair<Point2f,float> x) { return make_pair(x.first,norm(x.first - expected)); } );
+        }
 
-        vector<pair<Point2f,float>> scores;
-
-        //transform(begin(masses),end(masses),begin(distances),back_inserter(scores),[&](pair<Point2f,float> x,pair<Point2f,float> y) { return make_pair(x.first,norm(Point2f(x.second,y.second))); } );
-
-        auto nearest = min_element(begin(masses),end(masses),[=](pair<Point2f,float> x,pair<Point2f,float> y) { return x.second < y.second; });
-
-        //transform(begin(blobs),end(blobs),back_inserter(sizes),[] (pair<Point2f,float> x) {return x.second;} );
+        auto nearest = min_element(begin(mags),end(mags),[=](pair<Point2f,float> x,pair<Point2f,float> y) { return x.second < y.second; });
         
 
-        if(nearest != end(scores) && nearest->second < sqrt(230) * 2) {
-            cross(image,nearest->first);
-            cross(im,nearest->first);
+        if(nearest != end(mags)) {
             KF.correct(Mat(nearest->first));
         }
 
-        if(nearest != end(scores))
-            logs.push_back(nearest->second);
+        Point2f estimated = Point2f(KF.statePost(Range(0,2),Range(0,1)));;
+
+        cross(image,estimated);
+        cross(im,estimated);
 
 
-        imshow("out",im);
-        waitKey(25);
 
-        //image.convertTo(image,CV_32FC1);
+        //imshow("out",im);
+        //waitKey(1);
 
-        //image = image / 255;
-        
-        //im = 10 * image - 9;
+
         
     ++frames;
 
@@ -160,23 +170,30 @@ int main(int argc, char *argv[])
 
     cout << fps << " fps" << endl;
 
-    EM em(2);
 
 
-    ofstream os("log.txt");
-
-    for (int i = 0; i < logs.size(); ++i)
+    ofstream os("distlog.txt");
+    for (int i = 0; i < distlog.size(); ++i)
     {
-        os << logs[i] << endl;
+        os << distlog[i] << endl;
     }
-
     os.close();
 
+    ofstream os2("masslog.txt");
+    for (int i = 0; i < masslog.size(); ++i)
+    {
+        os2 << masslog[i] << endl;
+    }
+    os2.close();
 
-    Mat tr(logs);
+    cout << "Kalman" << endl << KF.errorCovPost << endl << endl;
 
 
-    em.train(tr.t());
+    Mat tr = Mat(distlog).reshape(1);
+
+    EM em(1);
+
+    em.train(tr);
 
     Mat m = em.get<Mat>("means");
     Mat w = em.get<Mat>("weights");
@@ -185,7 +202,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < m.rows; ++i)
     {
-        cout << w.at<double>(0,i) << "\t" << m.at<double>(i,0) << "\t" << c[i] << "\n";
+        cout << w.at<double>(0,i) << "\t" << m.row(i) << "\t" << c[i] << "\n";
     }
 
     return 0;

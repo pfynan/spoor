@@ -2,7 +2,7 @@ cmake_minimum_required( VERSION 2.8 )
 project( spoor )
 
 # Compile flag database
-set( CMAKE_EXPORT_COMPILE_COMMANDS 1 )
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Export stuff")
 
 
 add_definitions( -std=c++0x )

@@ -3,6 +3,7 @@ CAPS="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-na
 gst-launch-0.10 -e udpsrc port=5000 caps="$CAPS" ! \
         rtpjpegdepay ! jpegdec ! \
         videorate ! video/x-raw-yuv, framerate=25/1 ! \
-        jpegenc ! \
-        matroskamux ! filesink location=out.mkv
+        autovideosink force-aspect-ratio=true
+        #jpegenc ! \
+        #matroskamux ! filesink location=out.mkv
 

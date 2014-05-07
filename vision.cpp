@@ -22,7 +22,9 @@ using namespace boost;
 
 namespace po = boost::program_options;
 
-Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) : engaged(false) {
+//FIXME
+
+Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) : engaged(true) {
     franken_conn = _franken_conn;
     string outfile = "out.avi";
 
@@ -113,7 +115,8 @@ void Vision::run() {
             break;
         
 
-        if(frames >= 100)
+        //FIXME
+        if(frames >= 500)
             break;
 
         Mat disp;

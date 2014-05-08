@@ -6,7 +6,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/circular_buffer.hpp>
 
-#include <utility>
 #include <vector>
 
 #include "ImLogger.h"

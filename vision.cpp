@@ -9,7 +9,6 @@
 #include "vision.h"
 
 #include "ImLogger.h"
-#include "utility.h"
 #include "feature.h"
 #include "tracking.h"
 #include "franken.h"
@@ -22,9 +21,17 @@ using namespace boost;
 
 namespace po = boost::program_options;
 
-//FIXME
+void cross(cv::Mat& img,cv::Point pt,int size=10) {
+    using namespace cv;
 
-Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) : engaged(true) {
+
+    Scalar color = Scalar(0,0,255);
+    int thick = 3;
+    line(img,pt - Point(size/2,size/2),pt + Point(size/2,size/2),color,thick);
+    line(img,pt - Point(-size/2,size/2),pt + Point(-size/2,size/2),color,thick);
+}
+
+Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) : engaged(false) {
     franken_conn = _franken_conn;
     string outfile = "out.avi";
 

@@ -120,7 +120,7 @@ void Vision::run() {
         
 
         //FIXME
-        if(frames >= 500)
+        if(frames >= 200)
             break;
 
         Mat disp;
@@ -135,11 +135,24 @@ void Vision::run() {
 
         cross( disp , pp );
 
+
+        Mat norm_pos =  Mat::diag(Mat(Point2f(1./640.,1./480.))) * Mat(pp);
+
+        Point2f upleft(0,0), botright(0x200,0x2000);
+
+        Mat spot_zero = Mat(upleft);
+
+        Mat spot_scale = Mat::diag(Mat(botright - upleft));
+
+        Mat spot_coords = spot_scale * norm_pos + spot_zero;
+
+
+
         {
             lock_guard<mutex> lck(mtx);
             cur_pos = fp;
             if(engaged)
-                franken_conn->writeGoto(pp);
+                franken_conn->writeGoto(Point2f(spot_coords));
             // NOTE: I smell a deadlock...
         }
 

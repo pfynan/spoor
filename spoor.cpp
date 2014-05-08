@@ -65,8 +65,16 @@ int main(int argc,char *argv[]) {
     boost::shared_ptr<Vision> vision(new Vision(vm,franken_conn));
 
     thread thrift_thread(thriftThread,franken_conn,vision);
+
+    franken_conn->writeWake();
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+
+    franken_conn->writeCal();
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(10000));
+
+
     thread vision_thread(&Vision::run,vision);
-    
+
     vision_thread.join();
 
 

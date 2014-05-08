@@ -10,14 +10,15 @@ using namespace boost;
 
 using asio::ip::tcp;
 
-timer::nanosecond_type const rate_limit = 250L * 1000000L;
+timer::nanosecond_type const rate_limit = 50L * 1000000L;
 
 FrankenConnection::FrankenConnection() : io_service(), resolver(io_service) {
     lock_guard<mutex> lock( mtx ); // Deadlock in constructor?
 
     last_message = 0;
 
-    resolved =  resolver.resolve({"127.0.0.1", "8080"});
+    //resolved =  resolver.resolve({"127.0.0.1", "8080"});
+    resolved =  resolver.resolve({"192.168.88.252", "80"});
 
 }
 

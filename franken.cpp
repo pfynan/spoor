@@ -76,7 +76,7 @@ void FrankenConnection::writeGoto(Point2f pp) {
 
 void FrankenConnection::writeIntensity(ushort intens) {
     
-    if(message_timer.elapsed().wall - last_message >= rate_limit)
+    if(message_timer.elapsed().wall - last_message < rate_limit)
         return;
 
     last_message = message_timer.elapsed().wall;

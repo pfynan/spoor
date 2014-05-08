@@ -20,7 +20,8 @@ public:
     virtual double getProperty(int);
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
+    virtual IplImage* retrieveFrame(int, GstClockTime *tstamp = 0);
+
 
 protected:
     void init();
@@ -56,7 +57,7 @@ public:
     virtual bool open( const char* filename, 
                        double fps, CvSize frameSize);
     virtual void close();
-    virtual bool writeFrame( const IplImage* image );
+    virtual bool writeFrame( const IplImage* image, GstClockTime tstamp = GST_CLOCK_TIME_NONE);
 protected:
     void init();
     std::map<int, char*> encs;

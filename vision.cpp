@@ -78,7 +78,7 @@ void Vision::run() {
 
     if(!cap.open(3,
         "udpsrc port=4000 caps=\"application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)JPEG, payload=(int)96\" ! "
-        "rtpjpegdepay ! jpegdec ! ffmpegcolorspace ! appsink"
+        "rtpjpegdepay ! jpegdec ! ffmpegcolorspace ! queue ! appsink"
                 ))
         cerr << "Failed to open" << endl;
 
@@ -89,7 +89,9 @@ void Vision::run() {
     if(!out.open(
                 "appsrc ! "
                 "ffmpegcolorspace ! "
-                "video/x-raw-yuv ! "
+                "queue ! "
+                "videorate ! "
+                "video/x-raw-yuv,framerate=25/1 ! "
                 "jpegenc ! "
                 "rtpjpegpay ! "
                 "udpsink host=127.0.0.1 port=5000"
@@ -110,7 +112,9 @@ void Vision::run() {
         if(!cap.grabFrame())
             break;
 
-        image = Mat(cap.retrieveFrame(0));
+        GstClockTime tstamp;
+        image = Mat(cap.retrieveFrame(0,&tstamp));
+
         if(image.empty())
             break;
         
@@ -142,7 +146,7 @@ void Vision::run() {
 
         //writer << disp;
         IplImage oframe = IplImage(disp);
-        out.writeFrame(&oframe);
+        out.writeFrame(&oframe,tstamp);
         frames++;
 
     }

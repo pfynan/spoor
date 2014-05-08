@@ -257,7 +257,7 @@ bool CvCapture_GStreamer::grabFrame()
 //
 // decode buffer
 //
-IplImage * CvCapture_GStreamer::retrieveFrame(int)
+IplImage * CvCapture_GStreamer::retrieveFrame(int, GstClockTime *tstamp)
 {
     if(!buffer)
         return 0;
@@ -275,6 +275,9 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         frame = cvCreateImageHeader(cvSize(width, height), IPL_DEPTH_8U, 3);
         gst_caps_unref(buff_caps);
     }
+
+    if(tstamp)
+        *tstamp = GST_BUFFER_TIMESTAMP(buffer);
 
     // no need to memcpy, just use gstreamer's buffer :-)
     frame->imageData = (char *)GST_BUFFER_DATA(buffer);
@@ -592,7 +595,7 @@ bool CvVideoWriter_GStreamer::open( const char * pipeline_string,
     __END__;
     return true;
 }
-bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
+bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image, GstClockTime tstamp)
 {
 
     CV_FUNCNAME("CvVideoWriter_GStreamer::writerFrame");
@@ -617,6 +620,10 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     buffer = gst_buffer_new_and_alloc (size);
     //gst_buffer_set_data (buffer,(guint8*)image->imageData, size);
     memcpy (GST_BUFFER_DATA(buffer),image->imageData, size);
+
+    GST_BUFFER_TIMESTAMP(buffer) = tstamp;
+
+
     if(gst_app_src_push_buffer(GST_APP_SRC(source),buffer) != GST_FLOW_OK)
         CV_ERROR(CV_StsError, "Shit just went down!");
     //gst_buffer_unref(buffer);

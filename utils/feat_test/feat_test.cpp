@@ -105,21 +105,14 @@ int main(int argc, char *argv[])
     setIdentity(KF.measurementMatrix);
 
     setIdentity(KF.processNoiseCov);
-    KF.processNoiseCov *= 81;
+    KF.processNoiseCov *= 144;
 
 
     setIdentity(KF.measurementNoiseCov, Scalar::all(9));
-    //setIdentity(KF.errorCovPost, Scalar::all(1e+4));
-
-    KF.errorCovPost = *(Mat_<float>(4,4) <<
-42329860, 0, 505445.5, 0,
-  0, 42329860, 0, 505445.5,
-  505445.5, 0, 8077.2998, 0,
-  0, 505445.5, 0, 8077.2998
-  );
+    setIdentity(KF.errorCovPost, Scalar::all(1e+4));
 
 
-    randn(KF.statePost, Scalar::all(0), Scalar::all(100));
+    KF.statePost = *(Mat_<float>(4,1) << 640/2, 480/2, 0, 0);
 
 
 
@@ -142,6 +135,8 @@ int main(int argc, char *argv[])
 
 
     vector<float> masslog,distlog,hammlog,hu0log;
+
+    bool has_lock = false;
     
     int frames = 0;
 
@@ -174,8 +169,10 @@ int main(int argc, char *argv[])
 
         im.copyTo(i2);
 
-        Mat prediction = KF.predict();
-        Point2f expected = Point2f(prediction(Range(0,2),Range(0,1)));;
+        if(has_lock) {
+            KF.predict();
+        }
+
 
         auto blobs = getBlobs(i2);
 
@@ -188,7 +185,7 @@ int main(int argc, char *argv[])
         {
             masslog.push_back(blobs[i].second.m00);
             float mahal = Mahalanobis(Mat(blobs[i].first),KF.statePost(Range(0,2),Range(0,1)),iobs_cov);
-            distlog.push_back(mahal);
+            if(has_lock) distlog.push_back(mahal);
             vector<double> humoments;
             HuMoments(blobs[i].second,humoments);
 
@@ -196,7 +193,7 @@ int main(int argc, char *argv[])
 
             if(!(blobs[i].second.m00 > 16 && blobs[i].second.m00 < 160)) continue;
             if(humoments[0] > 0.3) continue;
-            if(mahal > 2) continue;
+            if(has_lock && mahal > 2) continue;
             mags.push_back(blobs[i]);
 
         }
@@ -216,8 +213,13 @@ int main(int argc, char *argv[])
 
         if(hamm > 6) {
             ++track_lost;
+            has_lock = false;
+            Point2f estimated = Point2f(640/2,480/2);
+            cross(image,estimated);
+            cross(im,estimated);
         }
         else {
+            has_lock = true;
             Point2f estimated = Point2f(KF.statePost(Range(0,2),Range(0,1)));;
 
             cross(image,estimated);
@@ -226,8 +228,8 @@ int main(int argc, char *argv[])
 
 
 
-        //imshow("out",im);
-        //waitKey(1);
+        imshow("out",image);
+        waitKey(1);
 
 
         

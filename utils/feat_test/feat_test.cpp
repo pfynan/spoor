@@ -9,11 +9,12 @@
 
 
 #include <boost/timer/timer.hpp>
+#include <boost/circular_buffer.hpp>
 using namespace std;
 using namespace cv;
 using namespace boost;
 
-vector<pair<Point2f,float>> getBlobs(Mat &image) {
+vector<pair<Point2f,Moments>> getBlobs(Mat &image) {
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
     findContours(image, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
@@ -30,10 +31,10 @@ vector<pair<Point2f,float>> getBlobs(Mat &image) {
         mc[i] = Point2f( mu[i].m10/mu[i].m00 , mu[i].m01/mu[i].m00);
     }
 
-    vector<pair<Point2f,float>> ret(contours.size());
+    vector<pair<Point2f,Moments>> ret(contours.size());
 
     for( size_t i = 0; i < contours.size(); i++ ) { 
-        ret[i] = make_pair(mc[i],mu[i].m00);
+        ret[i] = make_pair(mc[i],mu[i]);
     }
 
     return ret;
@@ -47,6 +48,34 @@ inline void cross(cv::Mat& img,cv::Point pt,int size=10) {
     int thick = 3;
     line(img,pt - Point(size/2,size/2),pt + Point(size/2,size/2),color,thick);
     line(img,pt - Point(-size/2,size/2),pt + Point(-size/2,size/2),color,thick);
+}
+
+template<class T>
+int circ_hamm_dist(T a, T b) {
+    assert(a.size() == b.size());
+
+    int acc_0 = INT_MAX;
+
+    for(int j = 0; j < a.size(); ++j) {
+        int acc = 0;
+        for(int i = 0; i < a.size(); ++i) {
+            if(a[(i + j) % a.size()] != b[i]) ++acc;
+        }
+
+        if(acc < acc_0) acc_0 = acc;
+    }
+
+    return acc_0;
+}
+
+template<class T>
+void dump(string fn, T d) {
+    ofstream os(fn);
+    for (int i = 0; i < d.size(); ++i)
+    {
+        os << d[i] << endl;
+    }
+    os.close();
 }
 
 int main(int argc, char *argv[])
@@ -74,29 +103,53 @@ int main(int argc, char *argv[])
             0, 0, 0, 1);
 
     setIdentity(KF.measurementMatrix);
-    setIdentity(KF.processNoiseCov, Scalar::all(100));
-    setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
+
+    setIdentity(KF.processNoiseCov);
+    KF.processNoiseCov *= 81;
+
+
+    setIdentity(KF.measurementNoiseCov, Scalar::all(9));
     //setIdentity(KF.errorCovPost, Scalar::all(1e+4));
 
     KF.errorCovPost = *(Mat_<float>(4,4) <<
-62231212, 0, 758041.62, 0,
-  0, 62231212, 0, 758041.62,
-  758041.62, 0, 12363.456, 0,
-  0, 758041.62, 0, 12363.456);
+42329860, 0, 505445.5, 0,
+  0, 42329860, 0, 505445.5,
+  505445.5, 0, 8077.2998, 0,
+  0, 505445.5, 0, 8077.2998
+  );
 
 
     randn(KF.statePost, Scalar::all(0), Scalar::all(100));
 
-    Mat iobs_cov = KF.measurementMatrix * KF.errorCovPost * KF.measurementMatrix.t() + KF.measurementNoiseCov;
-    invert(iobs_cov,iobs_cov,DECOMP_SVD);
 
-    vector<float> masslog,distlog;
+
+    circular_buffer<bool> was_there(15), expected_there(15);
+
+    for (int i = 0; i < 8; ++i)
+    {
+        expected_there.push_back(true);
+    }
+
+    for (int i = 0; i < 7; ++i)
+    {
+        expected_there.push_back(false);
+    }
+
+    for (int i = 0; i < 15; ++i)
+    {
+        was_there.push_back(false);
+    }
+
+
+    vector<float> masslog,distlog,hammlog,hu0log;
     
     int frames = 0;
 
+    int track_lost = 0;
     timer::cpu_timer timer;
     
     Mat image;
+
 
     while(capture >> image, !image.empty()) {
 
@@ -112,8 +165,8 @@ int main(int argc, char *argv[])
 
         GaussianBlur(im,im,Size(9,9),0);
 
-        dilate(im,im,getStructuringElement(MORPH_ELLIPSE,Size(7,7)));
-        //morphologyEx(im,im,MORPH_CLOSE,getStructuringElement(MORPH_ELLIPSE,Size(21,21)));
+        //dilate(im,im,getStructuringElement(MORPH_ELLIPSE,Size(7,7)));
+        morphologyEx(im,im,MORPH_CLOSE,getStructuringElement(MORPH_ELLIPSE,Size(5,5)));
 
         threshold(im,im,200,255,THRESH_BINARY);
 
@@ -126,30 +179,50 @@ int main(int argc, char *argv[])
 
         auto blobs = getBlobs(i2);
 
-        vector<pair<Point2f,float>> mags;
+        vector<pair<Point2f,Moments>> mags;
+
+        Mat iobs_cov = KF.measurementMatrix * KF.errorCovPost * KF.measurementMatrix.t() + KF.measurementNoiseCov;
+        invert(iobs_cov,iobs_cov,DECOMP_SVD);
 
         for (int i = 0; i < blobs.size(); ++i)
         {
-            masslog.push_back(blobs[i].second);
+            masslog.push_back(blobs[i].second.m00);
             float mahal = Mahalanobis(Mat(blobs[i].first),KF.statePost(Range(0,2),Range(0,1)),iobs_cov);
             distlog.push_back(mahal);
-            if(!(blobs[i].second > 61 && blobs[i].second < 295)) continue;
-            if(mahal > 1) continue;
+            vector<double> humoments;
+            HuMoments(blobs[i].second,humoments);
+
+            hu0log.push_back(humoments[0]);
+
+            if(!(blobs[i].second.m00 > 16 && blobs[i].second.m00 < 160)) continue;
+            if(humoments[0] > 0.3) continue;
+            if(mahal > 2) continue;
             mags.push_back(blobs[i]);
 
         }
 
-        auto nearest = min_element(begin(mags),end(mags),[=](pair<Point2f,float> x,pair<Point2f,float> y) { return x.second < y.second; });
+        auto nearest = min_element(begin(mags),end(mags),[=](pair<Point2f,Moments> x,pair<Point2f,Moments> y) { return x.second.m00 < y.second.m00; });
         
 
         if(nearest != end(mags)) {
             KF.correct(Mat(nearest->first));
         }
 
-        Point2f estimated = Point2f(KF.statePost(Range(0,2),Range(0,1)));;
+        was_there.push_back(mags.empty() ? false : true);
 
-        cross(image,estimated);
-        cross(im,estimated);
+        int hamm = circ_hamm_dist(was_there,expected_there);
+
+        hammlog.push_back(hamm);
+
+        if(hamm > 6) {
+            ++track_lost;
+        }
+        else {
+            Point2f estimated = Point2f(KF.statePost(Range(0,2),Range(0,1)));;
+
+            cross(image,estimated);
+            cross(im,estimated);
+        }
 
 
 
@@ -170,40 +243,17 @@ int main(int argc, char *argv[])
 
     cout << fps << " fps" << endl;
 
+    cout << "Lost beacon " << track_lost << " times \n";
 
 
-    ofstream os("distlog.txt");
-    for (int i = 0; i < distlog.size(); ++i)
-    {
-        os << distlog[i] << endl;
-    }
-    os.close();
+    dump("distlog.txt",distlog);
+    dump("masslog.txt",masslog);
+    dump("hammlog.txt",hammlog);
+    dump("hu0log.txt",hu0log);
 
-    ofstream os2("masslog.txt");
-    for (int i = 0; i < masslog.size(); ++i)
-    {
-        os2 << masslog[i] << endl;
-    }
-    os2.close();
 
     cout << "Kalman" << endl << KF.errorCovPost << endl << endl;
 
-
-    Mat tr = Mat(distlog).reshape(1);
-
-    EM em(1);
-
-    em.train(tr);
-
-    Mat m = em.get<Mat>("means");
-    Mat w = em.get<Mat>("weights");
-    vector<Mat> c = em.get<vector<Mat>>("covs");
-    //cv::sort(m,m,CV_SORT_EVERY_COLUMN | CV_SORT_ASCENDING);
-
-    for (int i = 0; i < m.rows; ++i)
-    {
-        cout << w.at<double>(0,i) << "\t" << m.row(i) << "\t" << c[i] << "\n";
-    }
 
     return 0;
 }

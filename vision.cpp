@@ -85,7 +85,7 @@ void Vision::run() {
 
     if(!cap.open(3,
         "udpsrc port=4000 caps=\"application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)JPEG, payload=(int)96\" ! "
-        "rtpjpegdepay ! jpegdec ! ffmpegcolorspace ! appsink"
+        "rtpjpegdepay ! jpegdec ! ffmpegcolorspace ! queue ! appsink"
                 ))
         cerr << "Failed to open" << endl;
 
@@ -96,7 +96,9 @@ void Vision::run() {
     if(!out.open(
                 "appsrc ! "
                 "ffmpegcolorspace ! "
-                "video/x-raw-yuv ! "
+                "queue ! "
+                "videorate ! "
+                "video/x-raw-yuv,framerate=25/1 ! "
                 "jpegenc ! "
                 "rtpjpegpay ! "
                 "udpsink host=127.0.0.1 port=5000"
@@ -117,13 +119,15 @@ void Vision::run() {
         if(!cap.grabFrame())
             break;
 
-        image = Mat(cap.retrieveFrame(0));
+        GstClockTime tstamp;
+        image = Mat(cap.retrieveFrame(0,&tstamp));
+
         if(image.empty())
             break;
         
 
         //FIXME
-        if(frames >= 500)
+        if(frames >= 200)
             break;
 
         Mat disp;
@@ -138,18 +142,31 @@ void Vision::run() {
 
         cross( disp , pp );
 
+
+        Mat norm_pos =  Mat::diag(Mat(Point2f(1./640.,1./480.))) * Mat(pp);
+
+        Point2f upleft(0,0), botright(0x200,0x2000);
+
+        Mat spot_zero = Mat(upleft);
+
+        Mat spot_scale = Mat::diag(Mat(botright - upleft));
+
+        Mat spot_coords = spot_scale * norm_pos + spot_zero;
+
+
+
         {
             lock_guard<mutex> lck(mtx);
             cur_pos = fp;
             if(engaged)
-                franken_conn->writeGoto(pp);
+                franken_conn->writeGoto(Point2f(spot_coords));
             // NOTE: I smell a deadlock...
         }
 
 
         //writer << disp;
         IplImage oframe = IplImage(disp);
-        out.writeFrame(&oframe);
+        out.writeFrame(&oframe,tstamp);
         frames++;
 
     }

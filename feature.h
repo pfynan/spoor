@@ -15,12 +15,16 @@ class FeatureExtract {
         FeatureExtract(cv::Size size,boost::shared_ptr<ImLogger> log);
         boost::optional<cv::Point2f> operator() (cv::Mat& image);
     private:
+        void initKalman();
+        void initCorr();
         cv::Size frame_size;
 
         boost::shared_ptr<ImLogger> logger;
-        cv::BackgroundSubtractorMOG bg_sub;
         cv::KalmanFilter KF;
 
+        boost::circular_buffer<bool> was_there, expected_there;
+
+        bool has_lock;
         
 
 };

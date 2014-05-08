@@ -37,7 +37,6 @@ set( PROJECT_SOURCES
     ImLogger.cpp
     spoor.cpp
     shoggoth.cpp
-    tracking.cpp
     vision.cpp
     cap_gstreamer.cpp
     gen-cpp/shoggoth_constants.cpp

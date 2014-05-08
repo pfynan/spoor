@@ -10,7 +10,6 @@
 
 #include "ImLogger.h"
 #include "feature.h"
-#include "tracking.h"
 #include "franken.h"
 
 #include "cap_gstreamer.h"
@@ -31,7 +30,9 @@ void cross(cv::Mat& img,cv::Point pt,int size=10) {
     line(img,pt - Point(-size/2,size/2),pt + Point(-size/2,size/2),color,thick);
 }
 
-Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) : engaged(false) {
+//FIXME
+
+Vision::Vision(boost::program_options::variables_map &vm, boost::shared_ptr<FrankenConnection> _franken_conn) : engaged(true) {
     franken_conn = _franken_conn;
     string outfile = "out.avi";
 
@@ -107,7 +108,6 @@ void Vision::run() {
 
 
     FeatureExtract fe(Size(640,480),log);
-    Tracking tr;
 
 
 
@@ -120,47 +120,49 @@ void Vision::run() {
             break;
 
         GstClockTime tstamp;
-        image = Mat(cap.retrieveFrame(0,&tstamp));
+
+        IplImage *iplim = cap.retrieveFrame(0,&tstamp);
+        if(!iplim)
+            break;
+
+        image = Mat(iplim);
 
         if(image.empty())
             break;
         
 
-        //FIXME
-        if(frames >= 200)
-            break;
-
         Mat disp;
         image.copyTo(disp);
-
+        
+        cvtColor(disp, disp, CV_BGR2GRAY);
+        GaussianBlur(disp,disp,Size(5,5),0);
+        cvtColor(disp, disp, CV_GRAY2BGR);
         
         optional<Point2f> fp = fe(image);
-        Point2f pp = tr(fp);
 
-        if(fp)
-            cross(disp, *fp);
+        if(fp) {
+            Point2f pp = *fp;
+            cross(disp, pp);
 
-        cross( disp , pp );
+            Mat norm_pos =  Mat::diag(Mat(Point2f(1./640.,1./480.))) * Mat(pp);
 
+            Point2f upleft(0,0), botright(0x200,0x2000);
 
-        Mat norm_pos =  Mat::diag(Mat(Point2f(1./640.,1./480.))) * Mat(pp);
+            Mat spot_zero = Mat(upleft);
 
-        Point2f upleft(0,0), botright(0x200,0x2000);
+            Mat spot_scale = Mat::diag(Mat(botright - upleft));
 
-        Mat spot_zero = Mat(upleft);
-
-        Mat spot_scale = Mat::diag(Mat(botright - upleft));
-
-        Mat spot_coords = spot_scale * norm_pos + spot_zero;
+            Mat spot_coords = spot_scale * norm_pos + spot_zero;
 
 
 
-        {
-            lock_guard<mutex> lck(mtx);
-            cur_pos = fp;
-            if(engaged)
-                franken_conn->writeGoto(Point2f(spot_coords));
-            // NOTE: I smell a deadlock...
+            {
+                lock_guard<mutex> lck(mtx);
+                cur_pos = fp;
+                if(engaged)
+                    franken_conn->writeGoto(Point2f(spot_coords));
+                // NOTE: I smell a deadlock...
+            }
         }
 
 

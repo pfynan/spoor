@@ -73,10 +73,12 @@ public:
     Status getStatus();
 
 private:
+
     boost::asio::io_service io_service;
-    boost::mutex mtx;
-    boost::asio::ip::tcp::resolver resolver;
-    boost::asio::ip::tcp::resolver::iterator resolved;
+    boost::asio::ip::udp::resolver resolver;
+    boost::asio::ip::udp::endpoint endpoint;
+    boost::asio::ip::udp::endpoint sender_endpoint;
+    boost::asio::ip::udp::socket s;
     void sendMessage(std::function<void(std::ostream&)> fn);
 
     boost::timer::nanosecond_type last_message;

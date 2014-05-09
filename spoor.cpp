@@ -66,6 +66,9 @@ int main(int argc,char *argv[]) {
 
     thread thrift_thread(thriftThread,franken_conn,vision);
 
+    franken_conn->getStatus();
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+
     franken_conn->writeWake();
     boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
 

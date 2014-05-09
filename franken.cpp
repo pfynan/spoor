@@ -17,8 +17,8 @@ FrankenConnection::FrankenConnection()
     : io_service()
     , s(io_service, udp::endpoint(udp::v4(), 1337))
     , resolver(io_service)
-    , endpoint(*resolver.resolve({udp::v4(), "127.0.0.1", "1337"}))
-    //, endpoint(*resolver.resolve({udp::v4(), "153.106.113.52", "1337"}))
+    //, endpoint(*resolver.resolve({udp::v4(), "127.0.0.1", "1337"}))
+    , endpoint(*resolver.resolve({udp::v4(), "153.106.113.52", "1337"}))
 {
 
     last_message = 0;

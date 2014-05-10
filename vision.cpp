@@ -90,16 +90,17 @@ void Vision::run() {
                 ))
         cerr << "Failed to open" << endl;
 
+    cap.setProperty(CV_CAP_GSTREAMER_QUEUE_LENGTH,2);
 
 
     CvVideoWriter_GStreamer out;
 
     if(!out.open(
                 "appsrc ! "
-                "ffmpegcolorspace ! "
                 "queue ! "
+                "ffmpegcolorspace ! "
                 "videorate ! "
-                "video/x-raw-yuv,framerate=25/1 ! "
+                "video/x-raw-yuv,framerate=15/1 ! "
                 "jpegenc ! "
                 "rtpjpegpay ! "
                 "udpsink host=127.0.0.1 port=5000"
@@ -114,6 +115,7 @@ void Vision::run() {
     int frames = 0;
 
     timer::cpu_timer timer;
+    auto last_frame = timer.elapsed().wall;
     Mat image;
     while(1) {
         if(!cap.grabFrame())
@@ -133,7 +135,7 @@ void Vision::run() {
 
         Mat disp;
         image.copyTo(disp);
-        
+
         cvtColor(disp, disp, CV_BGR2GRAY);
         GaussianBlur(disp,disp,Size(5,5),0);
         cvtColor(disp, disp, CV_GRAY2BGR);
@@ -154,23 +156,27 @@ void Vision::run() {
 
             Mat spot_coords = spot_scale * norm_pos + spot_zero;
 
-
-
             {
+		
                 lock_guard<mutex> lck(mtx);
                 cur_pos = fp;
                 if(engaged)
                     franken_conn->writeGoto(Point2f(spot_coords));
                 // NOTE: I smell a deadlock...
             }
+
         }
+	
+        timer::nanosecond_type const elapsed(timer.elapsed().wall);
 
-
+        //putText(disp,to_string(1e-6*(double)(elapsed-last_frame)),Point(550,440),FONT_HERSHEY_SIMPLEX,1,Scalar(0,200,0),1,8,false);
+		printf("\r%f\n",1e-6*(double)(elapsed-last_frame));
+        last_frame = elapsed;
+       
         //writer << disp;
         IplImage oframe = IplImage(disp);
         out.writeFrame(&oframe,tstamp);
         frames++;
-
     }
 
 

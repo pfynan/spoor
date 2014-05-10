@@ -73,6 +73,7 @@ public:
     Status getStatus();
 
 private:
+    boost::recursive_mutex mtx;
 
     boost::asio::io_service io_service;
     boost::asio::ip::udp::resolver resolver;

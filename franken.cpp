@@ -10,15 +10,16 @@ using namespace boost;
 
 using asio::ip::udp;
 
-timer::nanosecond_type const rate_limit = 50L * 1000000L;
+timer::nanosecond_type const rate_limit = 200L * 1000000L;
 timer::nanosecond_type const timeout = 100L * 1000000L;
 
 FrankenConnection::FrankenConnection() 
     : io_service()
-    , s(io_service, udp::endpoint(udp::v4(), 1337))
+    //, s(io_service, udp::endpoint(udp::v4(), 1337))
+    , s(io_service, udp::endpoint(udp::v4(), 8081))
     , resolver(io_service)
-    //, endpoint(*resolver.resolve({udp::v4(), "127.0.0.1", "1337"}))
-    , endpoint(*resolver.resolve({udp::v4(), "153.106.113.52", "1337"}))
+    , endpoint(*resolver.resolve({udp::v4(), "127.0.0.1", "8080"}))
+    //, endpoint(*resolver.resolve({udp::v4(), "153.106.113.52", "1337"}))
 {
 
     last_message = 0;
@@ -27,7 +28,7 @@ FrankenConnection::FrankenConnection()
 
 
 void FrankenConnection::sendMessage(std::function<void(std::ostream&)> fn) {
-
+    lock_guard<recursive_mutex> lock(mtx);
 
     asio::streambuf buf;
     ostream stream(&buf);
@@ -166,7 +167,7 @@ void FrankenConnection::writeCal() {
 }
 
 FrankenConnection::Status FrankenConnection::getStatus() {
-
+    lock_guard<recursive_mutex> lock(mtx);
     sendMessage([=] (ostream &buf) {
         // Message type
         buf.put(static_cast<char>(MessageType::STATUS));

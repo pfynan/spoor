@@ -1,4 +1,5 @@
 #include <iostream>
+#include <signal.h>
 
 
 
@@ -36,7 +37,11 @@ namespace po = boost::program_options;
  *
  */
 
-
+void sig_handler(int signo)
+{
+    if (signo == SIGINT)
+        exit(0);
+}
 
 
 
@@ -59,6 +64,7 @@ int main(int argc,char *argv[]) {
         return 1;
     }
 
+    signal(SIGINT,sig_handler);
 
     boost::shared_ptr<FrankenConnection> franken_conn(new FrankenConnection);
 
@@ -66,16 +72,17 @@ int main(int argc,char *argv[]) {
 
     thread thrift_thread(thriftThread,franken_conn,vision);
 
-    franken_conn->writeWake();
+/*    franken_conn->writeWake();
     boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
 
     franken_conn->writeCal();
     boost::this_thread::sleep_for(boost::chrono::milliseconds(10000));
+*/
 
+//    thread vision_thread(&Vision::run,vision);
 
-    thread vision_thread(&Vision::run,vision);
-
-    vision_thread.join();
+    vision->run();
+//    vision_thread.join();
 
 
     return 0;

@@ -104,7 +104,7 @@ void Vision::run() {
                 "jpegenc ! "
                 "rtpjpegpay ! "
                 "udpsink host=127.0.0.1 port=5000"
-                ,25,Size(640,480)))
+                ,15,Size(640,480)))
         cerr << "Failed to open output" << endl;
 
 
@@ -148,7 +148,7 @@ void Vision::run() {
 
             Mat norm_pos =  Mat::diag(Mat(Point2f(1./640.,1./480.))) * Mat(pp);
 
-            Point2f upleft(0,0), botright(0x200,0x2000);
+            Point2f upleft(0x0090,0x1c10), botright(0x0140,0x1600);
 
             Mat spot_zero = Mat(upleft);
 

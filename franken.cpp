@@ -18,7 +18,7 @@ FrankenConnection::FrankenConnection() : io_service(), resolver(io_service) {
     last_message = 0;
 
     //resolved =  resolver.resolve({"127.0.0.1", "8080"});
-    resolved =  resolver.resolve({"192.168.88.252", "80"});
+    resolved =  resolver.resolve({"153.106.113.49", "80"});
 
 }
 
@@ -44,7 +44,7 @@ void FrankenConnection::sendMessage(std::function<void(std::ostream&)> fn) {
     buffers.push_back( boost::asio::buffer(&header, sizeof(header)) );
     buffers.push_back( buf.data() );
 
-    boost::asio::write(s,buffers);
+    boost::asio::async_write(s,buffers,[](boost::system::error_code ec, std::size_t length){});
 
     s.close();
 

@@ -132,6 +132,7 @@ void Vision::run() {
         if(image.empty())
             break;
         
+        timer::nanosecond_type const proc_start(timer.elapsed().wall);
 
         Mat disp;
         image.copyTo(disp);
@@ -170,6 +171,7 @@ void Vision::run() {
         timer::nanosecond_type const elapsed(timer.elapsed().wall);
 
         putText(disp,to_string(1e-6*(double)(elapsed-last_frame)),Point(550,440),FONT_HERSHEY_SIMPLEX,1,Scalar(0,200,0),1,8,false);
+        putText(disp,to_string(1e-6*(double)(elapsed-proc_start)),Point(550,340),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,200),1,8,false);
         last_frame = elapsed;
        
         //writer << disp;

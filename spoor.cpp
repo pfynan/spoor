@@ -23,20 +23,6 @@ namespace po = boost::program_options;
 
 
 
-/*
- * Threads:
- *
- * Thrift  -|--| 
- * Franken -|--| // Next
- * Processing--|-|  // Wait
- * Gstreamer-----|  // Wait
- *
- * ...
- *
- * Jesus Christ almighty!
- *
- */
-
 void sig_handler(int signo)
 {
     if (signo == SIGINT)
@@ -78,10 +64,8 @@ int main(int argc,char *argv[]) {
     franken_conn->writeCal();
     boost::this_thread::sleep_for(boost::chrono::milliseconds(10000));
 
-//    thread vision_thread(&Vision::run,vision);
 
     vision->run();
-//    vision_thread.join();
 
 
     return 0;

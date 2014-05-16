@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <numeric>
 #include <cmath>
+#include <fstream>
 
 #include <cv.h>
 #include <highgui.h>
@@ -37,22 +38,24 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& im)
     //
     // But it works! And is somewhat clever.
     //
+
+    static ofstream blob_dump("blobs.txt");
+    static ofstream lock_dump("lock.txt");
     
     const int blur_size = 9;
     const int morph_size = 5;
     const int thresh_value = 200;
     const double blob_min_area = 16;
     const double blob_max_area = 160;
-    const double blob_max_hu0 = 0.3;
-    const double blob_max_distance_sds = 2;
-    const int max_hamming_distance = 5;
+    const double blob_max_hu0 = 0.25;
+    const double blob_max_distance_sds = 1;
+    const int max_hamming_distance = 4;
 
     cvtColor(im,im,CV_BGR2GRAY);
 
 
     GaussianBlur(im,im,Size(blur_size,blur_size),0);
 
-    //dilate(im,im,getStructuringElement(MORPH_ELLIPSE,Size(7,7)));
     morphologyEx(im,im,MORPH_CLOSE,getStructuringElement(MORPH_ELLIPSE,Size(morph_size,morph_size)));
 
     threshold(im,im,thresh_value,255,THRESH_BINARY);
@@ -62,13 +65,15 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& im)
 
     // Blob classification/elimination
 
-    vector<pair<Point2f,Moments>> mags;
+    vector<pair<Point2f,double>> mags;
 
     if(has_lock) {
         KF.predict();
     }
 
+    Mat obs_cov = KF.measurementMatrix * KF.errorCovPost * KF.measurementMatrix.t() + KF.measurementNoiseCov;
     Mat iobs_cov = KF.measurementMatrix * KF.errorCovPost * KF.measurementMatrix.t() + KF.measurementNoiseCov;
+
     invert(iobs_cov,iobs_cov,DECOMP_SVD);
 
     for (int i = 0; i < blobs.size(); ++i)
@@ -76,6 +81,8 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& im)
         float mahal = Mahalanobis(Mat(blobs[i].first),KF.statePost(Range(0,2),Range(0,1)),iobs_cov);
         vector<double> humoments;
         HuMoments(blobs[i].second,humoments);
+
+        blob_dump << blobs[i].second.m00 << " " << humoments[0] << " " << mahal << " " << obs_cov << endl;
 
         // Eliminate on:
 
@@ -88,12 +95,12 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& im)
         if(has_lock && mahal > blob_max_distance_sds) continue;
 
         // Otherwise:
-        mags.push_back(blobs[i]);
+        mags.push_back(make_pair(blobs[i].first,mahal));
 
     }
 
     // Chose biggest
-    auto nearest = min_element(begin(mags),end(mags),[=](pair<Point2f,Moments> x,pair<Point2f,Moments> y) { return x.second.m00 < y.second.m00; });
+    auto nearest = min_element(begin(mags),end(mags),[=](pair<Point2f,double> x,pair<Point2f,double> y) { return x.second < y.second; });
 
 
     if(nearest != end(mags)) {
@@ -103,6 +110,8 @@ boost::optional<cv::Point2f> FeatureExtract::operator()(cv::Mat& im)
     was_there.push_back(mags.empty() ? false : true);
 
     int hamm = circ_hamm_dist(was_there,expected_there);
+
+    lock_dump << has_lock << endl;
 
     if(hamm >= max_hamming_distance) {
         has_lock = false;

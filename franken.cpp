@@ -17,8 +17,8 @@ FrankenConnection::FrankenConnection() : io_service(), resolver(io_service) {
 
     last_message = 0;
 
-    //resolved =  resolver.resolve({"127.0.0.1", "8080"});
-    resolved =  resolver.resolve({"153.106.113.49", "80"});
+    resolved =  resolver.resolve({"127.0.0.1", "8080"});
+    //resolved =  resolver.resolve({"153.106.113.49", "80"});
 
 }
 
@@ -173,7 +173,7 @@ void FrankenConnection::writeCal() {
 }
 
 FrankenConnection::Status FrankenConnection::getStatus() {
-
+/*
     auto fn = ([=] (ostream &buf) {
         // Message type
         buf.put(static_cast<char>(MessageType::STATUS));
@@ -214,8 +214,27 @@ FrankenConnection::Status FrankenConnection::getStatus() {
         cerr << "Someone goofed..." << endl;
 
     buf2.commit(n);
+*/
+    Status status;
 
-    istream is(&buf2);
+    char tmp;
+    cout << "Enter Light Status:" << endl;
+    cin >> tmp;
+    status.light = (FrankenConnection::Status::LightStatus)tmp;
+    cout << "Enter intensity:" << endl;
+    int tmpi;
+    cin >> tmpi;
+    status.intensity = tmpi;
+    cout << "Enter Move Status:" << endl;
+    cin >> tmp;
+    status.move = (FrankenConnection::Status::MoveStatus)tmp;
+    cout << "Enter x:" << endl;
+    cin >> tmpi;
+    status.current_x = tmpi;
+    cout << "Enter y:" << endl;
+    cin >> tmpi;
+    status.current_y = tmpi;
+/*    istream is(&buf2);
 
     Status status;
 
@@ -229,7 +248,7 @@ FrankenConnection::Status FrankenConnection::getStatus() {
     status.current_x = ntohs(status.current_x);
     status.current_y = ntohs(status.current_y);
 
-    s.close();
+    s.close();*/
 
     return status;
 

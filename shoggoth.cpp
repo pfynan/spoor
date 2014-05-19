@@ -25,12 +25,13 @@ class TrackingHandler : virtual public TrackingIf {
         
   void setMode(const PointMode::type mode) {
     // Your implementation goes here
-    printf("setMode\n");
     switch(mode) {
         case PointMode::AUTOMATIC:
             vision->setEngaged(true);
+            printf("setMode to AUTOMATIC\n");
             break;
         case PointMode::MANUAL:
+            printf("setMode to MANUAL\n");
             vision->setEngaged(false);
             break;
     }
@@ -38,18 +39,19 @@ class TrackingHandler : virtual public TrackingIf {
 
   PointMode::type getMode() {
     // Your implementation goes here
-    printf("getMode\n");
     switch(vision->getEngaged()) {
         case true:
+            printf("getMode AUTOMATIC\n");
             return PointMode::AUTOMATIC;
         case false:
+            printf("getMode MANUAL\n");
             return PointMode::MANUAL;
     }
   }
 
   void setPos(const Coordinates& coord) {
     // Your implementation goes here
-    printf("setPos\n");
+    printf("setPos to %d, %d\n", coord.x, coord.y);
     cv::Point2f pp;
     pp.x = coord.x;
     pp.y = coord.y;
@@ -58,7 +60,7 @@ class TrackingHandler : virtual public TrackingIf {
 
   void setOnOff(const bool state) {
     // Your implementation goes here
-    printf("setOnOff\n");
+    printf("setOnOff to %d\n",state);
     franken_conn->writeOnOff(state);
   }
 
@@ -83,7 +85,7 @@ class TrackingHandler : virtual public TrackingIf {
 
   void setIntensity(const int8_t intens) {
     // Your implementation goes here
-    printf("setIntensity\n");
+    printf("setIntensity to %hhd\n", intens);
     franken_conn->writeIntensity(intens);
   }
 
